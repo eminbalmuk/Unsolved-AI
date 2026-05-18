@@ -31,10 +31,11 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScoreBadge } from "@/components/score-badge";
 import { TrendChart } from "@/components/charts";
 import { formatDateLabel } from "@/lib/scoring";
-import type { Problem } from "@/lib/types";
+import type { Problem, SourcePlatform } from "@/lib/types";
 
 type SortMode = "pain" | "new" | "validated";
 type TimeWindow = "today" | "3d" | "7d" | "30d" | "all";
+type SourceFilter = "all" | SourcePlatform;
 
 type BoardColumn = {
   id: string;
@@ -56,6 +57,13 @@ const timeWindowOptions: { value: TimeWindow; label: string }[] = [
   { value: "7d", label: "Son 1 hafta" },
   { value: "30d", label: "Son 1 ay" },
   { value: "all", label: "Tümü" },
+];
+
+const sourceFilterOptions: { value: SourceFilter; label: string }[] = [
+  { value: "all", label: "Tüm kaynaklar" },
+  { value: "Reddit", label: "Sadece Reddit" },
+  { value: "HackerNews", label: "Sadece HackerNews" },
+  { value: "App Store", label: "Sadece App Store" },
 ];
 
 function getWindowStart(window: TimeWindow) {
@@ -211,6 +219,40 @@ function TimeWindowPanel({
   );
 }
 
+function SourceFilterPanel({
+  source,
+  onSourceChange,
+}: {
+  source: SourceFilter;
+  onSourceChange: (value: SourceFilter) => void;
+}) {
+  return (
+    <Card className="bg-card/84">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-xl">
+          <Radio className="size-5 text-primary" aria-hidden />
+          Source
+        </CardTitle>
+        <CardDescription className="text-lg leading-7">
+          Reddit, HackerNews veya App Store sinyallerini ayır.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-2">
+        {sourceFilterOptions.map((option) => (
+          <Button
+            key={option.value}
+            variant={source === option.value ? "default" : "secondary"}
+            className="h-11 justify-start text-base"
+            onClick={() => onSourceChange(option.value)}
+          >
+            {option.label}
+          </Button>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
 function ProblemCard({
   problem,
   index,
@@ -270,7 +312,13 @@ function ProblemCard({
                 <Users className="size-4" aria-hidden />
                 {problem.validationCount} validators
               </span>
-              <span>{problem.sourcePlatforms.join(" / ")}</span>
+              <span className="flex flex-wrap items-center gap-2">
+                {problem.sourcePlatforms.map((platform) => (
+                  <Badge key={platform} variant="secondary" className="text-xs">
+                    {platform}
+                  </Badge>
+                ))}
+              </span>
             </div>
 
             <div className="flex items-center justify-between border-t pt-4 text-base">
@@ -347,6 +395,7 @@ export function DiscoveryFeed({
   const [sector, setSector] = useState("all");
   const [sort, setSort] = useState<SortMode>("pain");
   const [timeWindow, setTimeWindow] = useState<TimeWindow>("7d");
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefreshedAt, setLastRefreshedAt] = useState<string | null>(null);
   const [refreshError, setRefreshError] = useState<string | null>(null);
@@ -381,6 +430,8 @@ export function DiscoveryFeed({
       const matchesWindow = isInWindow(problem, timeWindow);
       const matchesSector =
         sector === "all" || problem.sector.toLowerCase() === sector;
+      const matchesSource =
+        sourceFilter === "all" || problem.sourcePlatforms.includes(sourceFilter);
       const matchesQuery =
         !query ||
         [problem.title, problem.summary, problem.aiSummary, ...problem.tags]
@@ -388,9 +439,9 @@ export function DiscoveryFeed({
           .toLowerCase()
           .includes(query.toLowerCase());
 
-      return matchesWindow && matchesSector && matchesQuery;
+      return matchesWindow && matchesSector && matchesSource && matchesQuery;
     });
-  }, [currentProblems, query, sector, timeWindow]);
+  }, [currentProblems, query, sector, sourceFilter, timeWindow]);
 
   const columns = useMemo(
     () => buildColumns(filtered, sort),
@@ -406,6 +457,9 @@ export function DiscoveryFeed({
   );
   const activeWindowLabel =
     timeWindowOptions.find((option) => option.value === timeWindow)?.label ?? "Tümü";
+  const activeSourceLabel =
+    sourceFilterOptions.find((option) => option.value === sourceFilter)?.label ??
+    "Tüm kaynaklar";
 
   return (
     <section className="mx-auto w-full max-w-[1680px] px-4 py-10 sm:px-6 lg:px-8">
@@ -433,6 +487,9 @@ export function DiscoveryFeed({
               </Badge>
               <Badge variant="outline" className="px-3 py-1 text-base">
                 {activeWindowLabel}
+              </Badge>
+              <Badge variant="outline" className="px-3 py-1 text-base">
+                {activeSourceLabel}
               </Badge>
             </div>
             <h1 className="mt-5 max-w-4xl text-5xl font-semibold leading-tight md:text-6xl xl:text-7xl">
@@ -535,6 +592,10 @@ export function DiscoveryFeed({
                     window={timeWindow}
                     onWindowChange={setTimeWindow}
                   />
+                  <SourceFilterPanel
+                    source={sourceFilter}
+                    onSourceChange={setSourceFilter}
+                  />
                   <FilterPanel sort={sort} onSortChange={setSort} />
                 </div>
               </SheetContent>
@@ -543,6 +604,13 @@ export function DiscoveryFeed({
 
           <div className="hidden lg:block">
             <TimeWindowPanel window={timeWindow} onWindowChange={setTimeWindow} />
+          </div>
+
+          <div className="hidden lg:block">
+            <SourceFilterPanel
+              source={sourceFilter}
+              onSourceChange={setSourceFilter}
+            />
           </div>
 
           <div className="hidden lg:block">
@@ -562,7 +630,7 @@ export function DiscoveryFeed({
               <div className="rounded-md border border-dashed bg-background/35 p-8 text-center">
                 <p className="text-2xl font-semibold">Bu keşif penceresi boş.</p>
                 <p className="mx-auto mt-3 max-w-xl text-base leading-7 text-muted-foreground">
-                  Aramayı temizle, sektör filtresini genişlet veya daha uzun bir tarih aralığı seç.
+                  Aramayı temizle, kaynak/sektör filtresini genişlet veya daha uzun bir tarih aralığı seç.
                 </p>
               </div>
             </div>

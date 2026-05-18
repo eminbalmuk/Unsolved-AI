@@ -1,5 +1,6 @@
 export type SourcePlatform =
   | "Reddit"
+  | "HackerNews"
   | "App Store"
   | "Google Play"
   | "X"

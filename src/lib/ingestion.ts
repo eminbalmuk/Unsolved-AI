@@ -73,11 +73,62 @@ type AppleReviewFeed = {
   };
 };
 
-const REDDIT_SUBREDDITS = ["SaaS", "startups", "ProductManagement"];
+type HackerNewsItem = {
+  id?: number;
+  deleted?: boolean;
+  dead?: boolean;
+  type?: string;
+  by?: string;
+  time?: number;
+  title?: string;
+  text?: string;
+  score?: number;
+  descendants?: number;
+};
+
+const DEFAULT_REDDIT_SUBREDDITS = [
+  "SaaS",
+  "startups",
+  "ProductManagement",
+  "smallbusiness",
+  "freelance",
+];
+const configuredRedditSubreddits =
+  process.env.REDDIT_SUBREDDITS?.split(",")
+    .map((subreddit) => subreddit.trim().replace(/^r\//i, ""))
+    .filter(Boolean) ?? [];
+const REDDIT_SUBREDDITS =
+  configuredRedditSubreddits.length > 0
+    ? configuredRedditSubreddits
+    : DEFAULT_REDDIT_SUBREDDITS;
 const APPLE_REVIEW_APP_IDS = ["6448311069", "618783545", "1232780281"];
 const APPLE_COUNTRY = process.env.APPLE_RSS_COUNTRY ?? "us";
 const USER_AGENT =
   process.env.REDDIT_USER_AGENT ?? "UnsolvedMVP/0.1 by local-dev";
+const configuredRedditMaxAgeDays = Number(process.env.REDDIT_MAX_AGE_DAYS ?? 365);
+const REDDIT_MAX_AGE_DAYS =
+  Number.isFinite(configuredRedditMaxAgeDays) && configuredRedditMaxAgeDays > 0
+    ? configuredRedditMaxAgeDays
+    : 365;
+const REDDIT_SEARCH_TERMS = [
+  '"I wish"',
+  '"is there a tool"',
+  '"looking for a tool"',
+  '"how do you deal with"',
+  '"frustrated with"',
+  '"manual process"',
+  '"doesn\'t work"',
+];
+const REDDIT_SEARCH_QUERY = `(${REDDIT_SEARCH_TERMS.join(" OR ")})`;
+const HACKER_NEWS_API_BASE = "https://hacker-news.firebaseio.com/v0";
+const configuredHackerNewsStoryLimit = Number(
+  process.env.HACKER_NEWS_STORY_LIMIT ?? 60,
+);
+const HACKER_NEWS_STORY_LIMIT =
+  Number.isFinite(configuredHackerNewsStoryLimit) &&
+  configuredHackerNewsStoryLimit > 0
+    ? Math.min(120, configuredHackerNewsStoryLimit)
+    : 60;
 
 const painTerms = [
   "frustrated",
@@ -120,9 +171,51 @@ const payTerms = [
 
 const featureTerms = ["wish", "need", "feature", "request", "missing", "would love"];
 const bugTerms = ["bug", "broken", "crash", "error", "doesn't work", "fail"];
+const redditPainPatterns = [
+  /\bi\s+(?:wish|hate|need|struggle|keep having|waste|spend|can't|cannot)\b/i,
+  /\b(?:is there|anyone know)\s+(?:a|an|any)?\s*.{0,60}\b(?:tool|app|software|saas|solution)\b/i,
+  /\blooking for\s+(?:a|an|any)?\s*.{0,60}\b(?:tool|app|software|saas|solution)\b/i,
+  /\bhow do you\s+(?:handle|manage|deal with|track|automate|solve)\b/i,
+  /\bhow to\s+(?:handle|manage|deal with|track|automate|solve)\b/i,
+  /\b(?:manual|manually)\s+\w*.{0,40}\b(?:process|workflow|workaround|spreadsheet|task)\b/i,
+  /\b(?:frustrated|annoying|broken|confusing|expensive|too much time|waste of time|without spending)\b/i,
+];
+const redditPromotionPatterns = [
+  /\b(?:i|we)(?:'|’)?(?:ve)?\s+.{0,24}\b(?:built|building|made|launched|created|sold|shipped|rebuilt)\b/i,
+  /\b(?:built|building|shipping)\s+(?:a|an|my|our)?\s*.{0,40}\b(?:saas|startup|product|app|tool)\b/i,
+  /\b(?:my|our)\s+(?:saas|startup|product|app|tool)\b/i,
+  /\b(?:waitlist|beta|launch|launched|mvp|roast|feedback|growth|visitors|paying customers?)\b/i,
+  /\b(?:appsumo|marketing spend|cold outreach|affiliate program|founder journey|build in public)\b/i,
+  /\b(?:looking for beta users|companion app|runs locally|from your iphone|in minutes)\b/i,
+];
+const redditMetaPatterns = [
+  /\b(?:what problems need solving|problem ideas?|validate my idea|honest opinions?|should i continue)\b/i,
+  /\b(?:will not promote|not promote|outside perspective|do people want this)\b/i,
+  /\b(?:here(?:'|’)s how|how i found|nobody tells you|finally got our first)\b/i,
+  /\b(?:build in public|founder journey|lessons learned|case study)\b/i,
+  /\b(?:saved me from|how to prevent it|i keep meeting founders|most saas churn)\b/i,
+];
+const hackerNewsMetaPatterns = [
+  /\b(?:who is hiring|who wants to be hired|freelancer seeking freelancer)\b/i,
+  /\b(?:launch hn|show hn|tell hn)\b/i,
+];
 
 function compactText(value: string) {
   return value.replace(/\s+/g, " ").trim();
+}
+
+function decodeHtml(value: string) {
+  return value
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, code) =>
+      String.fromCharCode(Number.parseInt(code, 16)),
+    )
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;|&#39;/g, "'")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">");
 }
 
 function truncate(value: string, length = 220) {
@@ -141,6 +234,10 @@ function slugify(value: string) {
 function keywordScore(text: string, terms: string[]) {
   const lower = text.toLowerCase();
   return terms.reduce((score, term) => score + (lower.includes(term) ? 1 : 0), 0);
+}
+
+function patternScore(text: string, patterns: RegExp[]) {
+  return patterns.reduce((score, pattern) => score + (pattern.test(text) ? 1 : 0), 0);
 }
 
 function classifySignal(text: string): ProblemCategory {
@@ -174,12 +271,18 @@ function scoreBreakdown(signal: RawSignal): PainScoreBreakdown {
   const text = `${signal.title} ${signal.body}`;
   const painHits = keywordScore(text, painTerms);
   const payHits = keywordScore(text, payTerms);
-  const platformBoost = signal.platform === "Reddit" ? signal.comments ?? 0 : 0;
+  const discussionBoost =
+    signal.platform === "Reddit" || signal.platform === "HackerNews"
+      ? Math.log10((signal.comments ?? 0) + 1) * 18
+      : 0;
   const lowRatingBoost =
     signal.rating && signal.rating <= 3 ? (4 - signal.rating) * 16 : 0;
 
   return {
-    frequency: Math.min(100, 45 + Math.log10((signal.score ?? 1) + 1) * 18 + platformBoost * 0.9),
+    frequency: Math.min(
+      100,
+      45 + Math.log10(Math.max(0, signal.score ?? 0) + 1) * 14 + discussionBoost,
+    ),
     emotionalIntensity: Math.min(100, 42 + painHits * 9 + lowRatingBoost),
     willingnessToPay: Math.min(100, 38 + payHits * 14 + (text.toLowerCase().includes("$") ? 14 : 0)),
   };
@@ -298,18 +401,66 @@ async function fetchJson<T>(
   return response.json() as Promise<T>;
 }
 
+function isUsefulRedditSignal(title: string, body: string) {
+  const text = compactText(`${title} ${body}`);
+  if (text.length < 40) return false;
+
+  const intentScore = patternScore(text, redditPainPatterns);
+  const painScore =
+    keywordScore(text, painTerms) + keywordScore(text, featureTerms) + intentScore * 2;
+  const promotionScore = patternScore(text, redditPromotionPatterns);
+  const metaScore = patternScore(text, redditMetaPatterns);
+
+  if (metaScore > 0) return false;
+  if (promotionScore >= 3) return false;
+  if (promotionScore > 0 && intentScore === 0) return false;
+  if (promotionScore >= 2 && intentScore < 3) return false;
+  if (promotionScore >= 2 && painScore < 5) return false;
+  if (painScore < 3) return false;
+
+  return true;
+}
+
+function isUsefulHackerNewsSignal(title: string, body: string) {
+  const text = compactText(`${title} ${body}`);
+  if (text.length < 28) return false;
+  if (patternScore(text, hackerNewsMetaPatterns) > 0) return false;
+
+  const normalizedTitle = title.replace(/^Ask HN:\s*/i, "");
+  const intentScore = patternScore(text, redditPainPatterns);
+  const painScore =
+    keywordScore(text, painTerms) +
+    keywordScore(text, featureTerms) +
+    intentScore * 2;
+
+  if (/^Ask HN:/i.test(title) && patternScore(normalizedTitle, redditPainPatterns) > 0) {
+    return true;
+  }
+
+  return painScore >= 3 && intentScore > 0;
+}
+
 async function fetchRedditSignals(options: LiveFetchOptions = {}) {
-  const query = encodeURIComponent(
-    '"I wish" OR frustrated OR pain OR problem OR "doesn\'t work"',
-  );
+  const seen = new Set<string>();
+  const newestAllowedCreatedAt =
+    Date.now() - REDDIT_MAX_AGE_DAYS * 24 * 60 * 60 * 1000;
   const feeds = await Promise.allSettled(
-    REDDIT_SUBREDDITS.map((subreddit) =>
-      fetchJson<RedditListing>(
-        `https://www.reddit.com/r/${subreddit}/search.json?q=${query}&restrict_sr=1&sort=new&limit=8`,
+    REDDIT_SUBREDDITS.map((subreddit) => {
+      const params = new URLSearchParams({
+        q: REDDIT_SEARCH_QUERY,
+        restrict_sr: "1",
+        sort: "new",
+        t: "year",
+        limit: "25",
+        raw_json: "1",
+      });
+
+      return fetchJson<RedditListing>(
+        `https://www.reddit.com/r/${subreddit}/search.json?${params.toString()}`,
         { headers: { "User-Agent": USER_AGENT } },
         options,
-      ),
-    ),
+      );
+    }),
   );
 
   return feeds.flatMap((result) => {
@@ -320,8 +471,14 @@ async function fetchRedditSignals(options: LiveFetchOptions = {}) {
         ?.map((child): RawSignal | null => {
           const data = child.data;
           if (!data?.id || !data.title) return null;
+          if (seen.has(data.id)) return null;
+          const capturedAt = new Date((data.created_utc ?? Date.now() / 1000) * 1000);
+          if (capturedAt.getTime() < newestAllowedCreatedAt) return null;
+
           const body = compactText(data.selftext ?? "");
-          if (body.length < 40) return null;
+          if (!isUsefulRedditSignal(data.title, body)) return null;
+
+          seen.add(data.id);
 
           return {
             id: data.id,
@@ -331,12 +488,64 @@ async function fetchRedditSignals(options: LiveFetchOptions = {}) {
             author: data.author,
             score: data.score,
             comments: data.num_comments,
-            capturedAt: new Date((data.created_utc ?? Date.now() / 1000) * 1000).toISOString(),
+            capturedAt: capturedAt.toISOString(),
             url: `https://www.reddit.com${data.permalink ?? ""}`,
           };
         })
         .filter((signal): signal is RawSignal => Boolean(signal)) ?? []
     );
+  });
+}
+
+async function fetchHackerNewsSignals(options: LiveFetchOptions = {}) {
+  const ids = await fetchJson<number[]>(
+    `${HACKER_NEWS_API_BASE}/askstories.json`,
+    undefined,
+    options,
+  );
+
+  const itemResults = await Promise.allSettled(
+    ids.slice(0, HACKER_NEWS_STORY_LIMIT).map((id) =>
+      fetchJson<HackerNewsItem>(
+        `${HACKER_NEWS_API_BASE}/item/${id}.json`,
+        undefined,
+        options,
+      ),
+    ),
+  );
+
+  return itemResults.flatMap((result): RawSignal[] => {
+    if (result.status !== "fulfilled") return [];
+
+    const item = result.value;
+    if (
+      !item.id ||
+      item.deleted ||
+      item.dead ||
+      item.type !== "story" ||
+      !item.title
+    ) {
+      return [];
+    }
+
+    const title = decodeHtml(item.title);
+    const body = compactText(decodeHtml(item.text ?? ""));
+
+    if (!isUsefulHackerNewsSignal(title, body)) return [];
+
+    return [
+      {
+        id: String(item.id),
+        platform: "HackerNews",
+        title,
+        body: body || title,
+        author: item.by,
+        score: item.score,
+        comments: item.descendants,
+        capturedAt: new Date((item.time ?? Date.now() / 1000) * 1000).toISOString(),
+        url: `https://news.ycombinator.com/item?id=${item.id}`,
+      },
+    ];
   });
 }
 
@@ -383,29 +592,53 @@ async function fetchAppleReviewSignals(options: LiveFetchOptions = {}) {
 }
 
 function dedupeProblems(problems: Problem[]) {
-  const seen = new Set<string>();
+  const seen = new Map<string, Problem>();
 
-  return problems.filter((problem) => {
+  for (const problem of problems) {
     const key = problem.title
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, " ")
       .trim()
       .slice(0, 80);
 
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+    const existing = seen.get(key);
+    if (!existing) {
+      seen.set(key, problem);
+      continue;
+    }
+
+    const lastSeenAt =
+      new Date(problem.lastSeenAt).getTime() > new Date(existing.lastSeenAt).getTime()
+        ? problem.lastSeenAt
+        : existing.lastSeenAt;
+
+    seen.set(key, {
+      ...existing,
+      painScore: Math.max(existing.painScore, problem.painScore),
+      validationCount: Math.max(existing.validationCount, problem.validationCount),
+      lastSeenAt,
+      sourceCount: existing.sourceCount + problem.sourceCount,
+      sourcePlatforms: Array.from(
+        new Set([...existing.sourcePlatforms, ...problem.sourcePlatforms]),
+      ),
+      sources: [...existing.sources, ...problem.sources],
+      tags: Array.from(new Set([...existing.tags, ...problem.tags])).slice(0, 4),
+    });
+  }
+
+  return Array.from(seen.values());
 }
 
 export async function getLiveSignals(options: LiveFetchOptions = {}) {
-  const [reddit, apple] = await Promise.allSettled([
+  const [reddit, hackerNews, apple] = await Promise.allSettled([
     fetchRedditSignals(options),
+    fetchHackerNewsSignals(options),
     fetchAppleReviewSignals(options),
   ]);
 
   return [
     ...(reddit.status === "fulfilled" ? reddit.value : []),
+    ...(hackerNews.status === "fulfilled" ? hackerNews.value : []),
     ...(apple.status === "fulfilled" ? apple.value : []),
   ];
 }

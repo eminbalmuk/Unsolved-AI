@@ -46,12 +46,16 @@ npm run build
 
 The Explore feed now pulls real public data server-side from:
 
-- Reddit public listing/search JSON for `r/SaaS`, `r/startups`, and `r/ProductManagement`
+- Reddit public listing/search JSON for configurable subreddit targets
+- Hacker News official Firebase API for recent `Ask HN` problem-seeking threads
 - Apple iTunes/App Store customer review RSS JSON for configured app IDs
 
 Live source fetches are cached for 15 minutes and fall back to Supabase-stored problems, then the seed dataset, if every provider fails. When `DATABASE_URL` is configured, normalized problems and source snippets are persisted in Supabase so the app does not repeatedly fetch already-known forum problems. Optional environment variables:
 
 - `REDDIT_USER_AGENT`
+- `REDDIT_SUBREDDITS` - comma-separated subreddit list, for example `SaaS,startups,smallbusiness`
+- `REDDIT_MAX_AGE_DAYS` - Reddit signal freshness window, defaults to `365`
+- `HACKER_NEWS_STORY_LIMIT` - recent Ask HN items to inspect, defaults to `60`
 - `APPLE_RSS_COUNTRY`
 
 ## Turkish problem analysis
