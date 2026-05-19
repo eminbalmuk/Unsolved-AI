@@ -44,7 +44,10 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json(
-      { error: "Auth is not configured. Fill DATABASE_URL and AUTH_SECRET in .env." },
+      {
+        error:
+          "Auth is not configured. Add Supabase Auth env vars or DATABASE_URL plus AUTH_SECRET.",
+      },
       { status: 503 },
     );
   }

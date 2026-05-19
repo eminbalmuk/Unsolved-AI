@@ -64,8 +64,9 @@ export default async function DashboardPage() {
             <CardHeader>
               <CardTitle>Auth environment is not configured yet</CardTitle>
               <CardDescription className="text-base">
-                Fill `DATABASE_URL` and `AUTH_SECRET` in `.env`, then run
-                `npm run db:push` to persist accounts in Supabase.
+                Configure Supabase Auth with `SUPABASE_URL` and
+                `SUPABASE_ANON_KEY`, or add `DATABASE_URL` plus `AUTH_SECRET`
+                for the local JWT auth fallback.
               </CardDescription>
             </CardHeader>
           </Card>
