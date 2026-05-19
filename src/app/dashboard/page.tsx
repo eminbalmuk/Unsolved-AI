@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Bell, BookmarkCheck, CheckCircle2, Download, LockKeyhole } from "lucide-react";
+import { AccountSettingsPanel } from "@/components/account-settings-panel";
 import { AppShell } from "@/components/app-shell";
 import { MetricCard } from "@/components/metric-card";
 import { ScoreBadge } from "@/components/score-badge";
@@ -103,6 +104,8 @@ export default async function DashboardPage() {
             hint="New evidence this week"
           />
         </div>
+
+        {user ? <AccountSettingsPanel user={user} /> : null}
 
         <Card className="bg-card/82">
           <CardHeader>

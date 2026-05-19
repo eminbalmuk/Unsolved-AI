@@ -14,6 +14,7 @@ import {
   Radio,
   RefreshCw,
   Search,
+  SlidersHorizontal,
   Users,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -104,7 +105,7 @@ function sortProblems(problems: Problem[], sort: SortMode) {
 }
 
 function buildColumns(problems: Problem[], sort: SortMode): BoardColumn[] {
-  const newestCutoff = Date.now() - 1000 * 60 * 60 * 24;
+  const newestCutoff = Date.now() - 1000 * 60 * 60 * 24 * 7;
 
   const columns: BoardColumn[] = [
     {
@@ -112,7 +113,7 @@ function buildColumns(problems: Problem[], sort: SortMode): BoardColumn[] {
       title: "Critical pain",
       description: "High urgency signals with the strongest weighted pain.",
       accent: "bg-red-400",
-      problems: problems.filter((problem) => problem.painScore >= 84),
+      problems: problems.filter((problem) => problem.painScore >= 55),
     },
     {
       id: "rising",
@@ -120,13 +121,20 @@ function buildColumns(problems: Problem[], sort: SortMode): BoardColumn[] {
       description: "Problems gaining traction but still early enough to enter.",
       accent: "bg-primary",
       problems: problems.filter(
-        (problem) => problem.painScore < 84 && problem.painScore >= 74,
+        (problem) => problem.painScore < 55 && problem.painScore >= 35,
       ),
+    },
+    {
+      id: "watch",
+      title: "Watchlist",
+      description: "Lower-score signals worth scanning before they cluster.",
+      accent: "bg-sky-300",
+      problems: problems.filter((problem) => problem.painScore < 35),
     },
     {
       id: "fresh",
       title: "Fresh evidence",
-      description: "Recent public posts and reviews from live sources.",
+      description: "Recent public posts and reviews from the last 7 days.",
       accent: "bg-amber-300",
       problems: problems.filter(
         (problem) => new Date(problem.lastSeenAt).getTime() >= newestCutoff,
@@ -143,7 +151,7 @@ function buildColumns(problems: Problem[], sort: SortMode): BoardColumn[] {
 
   return columns.map((column) => ({
     ...column,
-    problems: sortProblems(column.problems, sort).slice(0, 7),
+    problems: sortProblems(column.problems, sort).slice(0, 12),
   }));
 }
 
@@ -248,6 +256,59 @@ function SourceFilterPanel({
             {option.label}
           </Button>
         ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ScoreFilterPanel({
+  minScore,
+  onMinScoreChange,
+}: {
+  minScore: number;
+  onMinScoreChange: (value: number) => void;
+}) {
+  return (
+    <Card className="bg-card/84">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-xl">
+          <SlidersHorizontal className="size-5 text-primary" aria-hidden />
+          Score floor
+        </CardTitle>
+        <CardDescription className="text-lg leading-7">
+          En düşük problem skorunu sen belirle.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-4">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-sm text-muted-foreground">0</span>
+          <span className="rounded-md bg-primary/12 px-3 py-1 font-mono text-xl font-semibold text-primary">
+            {minScore}
+          </span>
+          <span className="text-sm text-muted-foreground">100</span>
+        </div>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          step="5"
+          value={minScore}
+          onChange={(event) => onMinScoreChange(Number(event.target.value))}
+          className="h-2 w-full cursor-pointer accent-primary"
+          aria-label="Minimum pain score"
+        />
+        <div className="grid grid-cols-4 gap-2">
+          {[0, 30, 50, 70].map((value) => (
+            <Button
+              key={value}
+              variant={minScore === value ? "default" : "secondary"}
+              className="h-9 px-2 text-sm"
+              onClick={() => onMinScoreChange(value)}
+            >
+              {value}+
+            </Button>
+          ))}
+        </div>
       </CardContent>
     </Card>
   );
@@ -394,8 +455,9 @@ export function DiscoveryFeed({
   const [query, setQuery] = useState("");
   const [sector, setSector] = useState("all");
   const [sort, setSort] = useState<SortMode>("pain");
-  const [timeWindow, setTimeWindow] = useState<TimeWindow>("7d");
+  const [timeWindow, setTimeWindow] = useState<TimeWindow>("all");
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
+  const [minScore, setMinScore] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefreshedAt, setLastRefreshedAt] = useState<string | null>(null);
   const [refreshError, setRefreshError] = useState<string | null>(null);
@@ -432,6 +494,7 @@ export function DiscoveryFeed({
         sector === "all" || problem.sector.toLowerCase() === sector;
       const matchesSource =
         sourceFilter === "all" || problem.sourcePlatforms.includes(sourceFilter);
+      const matchesScore = problem.painScore >= minScore;
       const matchesQuery =
         !query ||
         [problem.title, problem.summary, problem.aiSummary, ...problem.tags]
@@ -439,9 +502,15 @@ export function DiscoveryFeed({
           .toLowerCase()
           .includes(query.toLowerCase());
 
-      return matchesWindow && matchesSector && matchesSource && matchesQuery;
+      return (
+        matchesWindow &&
+        matchesSector &&
+        matchesSource &&
+        matchesScore &&
+        matchesQuery
+      );
     });
-  }, [currentProblems, query, sector, sourceFilter, timeWindow]);
+  }, [currentProblems, minScore, query, sector, sourceFilter, timeWindow]);
 
   const columns = useMemo(
     () => buildColumns(filtered, sort),
@@ -490,6 +559,9 @@ export function DiscoveryFeed({
               </Badge>
               <Badge variant="outline" className="px-3 py-1 text-base">
                 {activeSourceLabel}
+              </Badge>
+              <Badge variant="outline" className="px-3 py-1 text-base">
+                Score {minScore}+
               </Badge>
             </div>
             <h1 className="mt-5 max-w-4xl text-5xl font-semibold leading-tight md:text-6xl xl:text-7xl">
@@ -596,6 +668,10 @@ export function DiscoveryFeed({
                     source={sourceFilter}
                     onSourceChange={setSourceFilter}
                   />
+                  <ScoreFilterPanel
+                    minScore={minScore}
+                    onMinScoreChange={setMinScore}
+                  />
                   <FilterPanel sort={sort} onSortChange={setSort} />
                 </div>
               </SheetContent>
@@ -610,6 +686,13 @@ export function DiscoveryFeed({
             <SourceFilterPanel
               source={sourceFilter}
               onSourceChange={setSourceFilter}
+            />
+          </div>
+
+          <div className="hidden lg:block">
+            <ScoreFilterPanel
+              minScore={minScore}
+              onMinScoreChange={setMinScore}
             />
           </div>
 
@@ -630,7 +713,7 @@ export function DiscoveryFeed({
               <div className="rounded-md border border-dashed bg-background/35 p-8 text-center">
                 <p className="text-2xl font-semibold">Bu keşif penceresi boş.</p>
                 <p className="mx-auto mt-3 max-w-xl text-base leading-7 text-muted-foreground">
-                  Aramayı temizle, kaynak/sektör filtresini genişlet veya daha uzun bir tarih aralığı seç.
+                  Aramayı temizle, skor eşiğini düşür, kaynak/sektör filtresini genişlet veya daha uzun bir tarih aralığı seç.
                 </p>
               </div>
             </div>

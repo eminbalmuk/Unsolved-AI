@@ -281,10 +281,13 @@ function scoreBreakdown(signal: RawSignal): PainScoreBreakdown {
   return {
     frequency: Math.min(
       100,
-      45 + Math.log10(Math.max(0, signal.score ?? 0) + 1) * 14 + discussionBoost,
+      18 + Math.log10(Math.max(0, signal.score ?? 0) + 1) * 14 + discussionBoost,
     ),
-    emotionalIntensity: Math.min(100, 42 + painHits * 9 + lowRatingBoost),
-    willingnessToPay: Math.min(100, 38 + payHits * 14 + (text.toLowerCase().includes("$") ? 14 : 0)),
+    emotionalIntensity: Math.min(100, 16 + painHits * 9 + lowRatingBoost),
+    willingnessToPay: Math.min(
+      100,
+      12 + payHits * 14 + (text.toLowerCase().includes("$") ? 14 : 0),
+    ),
   };
 }
 
@@ -357,7 +360,7 @@ function signalToProblem(signal: RawSignal, index: number): Problem {
         ? "Mobile Apps"
         : "SaaS",
     category: classifySignal(text),
-    status: painScore >= 84 ? "validated" : "rising",
+    status: painScore >= 55 ? "validated" : "rising",
     summary: truncate(signal.body || signal.title, 150),
     aiSummary: `Live heuristic summary: this ${signal.platform} signal repeats a concrete customer pain around ${tags.join(", ")}. It should be reviewed against more sources before product commitment.`,
     painScore,
@@ -367,10 +370,10 @@ function signalToProblem(signal: RawSignal, index: number): Problem {
     sourceCount: Math.max(1, signal.comments ?? 1),
     sourcePlatforms: [signal.platform],
     trend: [
-      { label: "Now -4w", score: Math.max(35, painScore - 18), mentions: 6 },
-      { label: "Now -3w", score: Math.max(38, painScore - 13), mentions: 10 },
-      { label: "Now -2w", score: Math.max(42, painScore - 8), mentions: 15 },
-      { label: "Now -1w", score: Math.max(45, painScore - 4), mentions: 19 },
+      { label: "Now -4w", score: Math.max(12, painScore - 18), mentions: 6 },
+      { label: "Now -3w", score: Math.max(14, painScore - 13), mentions: 10 },
+      { label: "Now -2w", score: Math.max(16, painScore - 8), mentions: 15 },
+      { label: "Now -1w", score: Math.max(18, painScore - 4), mentions: 19 },
       { label: "Live", score: painScore, mentions: Math.max(22, signal.comments ?? 12) },
     ],
     sources: [source],
@@ -666,7 +669,7 @@ export async function getLiveProblems(options: LiveFetchOptions = {}) {
     signals
       .map(signalToProblem)
       .sort((a, b) => b.painScore - a.painScore),
-  ).slice(0, 32);
+  ).slice(0, 96);
 
   if (liveProblems.length > 0) {
     await upsertStoredProblems(liveProblems);

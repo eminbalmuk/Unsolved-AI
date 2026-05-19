@@ -11,6 +11,7 @@ export type SessionUser = {
   id: string;
   email: string;
   name: string | null;
+  company: string | null;
   role: string;
   plan: string;
 };
@@ -57,6 +58,29 @@ function getSupabaseError(data: SupabaseSessionResponse) {
     data.msg ??
     "Supabase authentication failed."
   );
+}
+
+async function verifySupabasePassword(email: string, password: string) {
+  const config = getSupabaseAuthConfig();
+  if (!config) throw new Error("Supabase Auth is not configured.");
+
+  const response = await fetch(`${config.url}/auth/v1/token?grant_type=password`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: config.anonKey,
+      Authorization: `Bearer ${config.anonKey}`,
+    },
+    body: JSON.stringify({ email, password }),
+    cache: "no-store",
+  });
+  const data = (await response.json()) as SupabaseSessionResponse;
+
+  if (!response.ok || !data.user) {
+    throw new Error("Current password is incorrect.");
+  }
+
+  return data;
 }
 
 async function syncSupabaseUser(user: SupabaseAuthUser) {
@@ -152,6 +176,7 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
         id: user.id,
         email: user.email ?? "",
         name: user.user_metadata?.name ?? null,
+        company: user.user_metadata?.company ?? null,
         role: "FOUNDER",
         plan: "FREEMIUM",
       };
@@ -176,6 +201,7 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
         id: true,
         email: true,
         name: true,
+        company: true,
         role: true,
         plan: true,
       },
@@ -208,11 +234,13 @@ export async function ensureDatabaseUser(user: SessionUser) {
       update: {
         email: user.email,
         name: user.name,
+        company: user.company,
       },
       create: {
         id: user.id,
         email: user.email,
         name: user.name,
+        company: user.company,
         passwordHash: "supabase-auth",
       },
     });
@@ -286,6 +314,7 @@ export async function signUpWithSupabase({
           id: data.user.id,
           email: data.user.email ?? email,
           name: data.user.user_metadata?.name ?? name,
+          company: data.user.user_metadata?.company ?? company ?? null,
           role: "FOUNDER",
           plan: "FREEMIUM",
         }
@@ -327,7 +356,125 @@ export async function signInWithSupabase({
     id: data.user.id,
     email: data.user.email ?? email,
     name: data.user.user_metadata?.name ?? null,
+    company: data.user.user_metadata?.company ?? null,
     role: "FOUNDER",
     plan: "FREEMIUM",
   };
+}
+
+export async function updateSupabaseProfile({
+  name,
+  company,
+}: {
+  name: string;
+  company?: string | null;
+}) {
+  const config = getSupabaseAuthConfig();
+  if (!config) throw new Error("Supabase Auth is not configured.");
+
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get(SUPABASE_ACCESS_COOKIE)?.value;
+
+  if (!accessToken) {
+    throw new Error("Supabase session is not available.");
+  }
+
+  const response = await fetch(`${config.url}/auth/v1/user`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: config.anonKey,
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ data: { name, company: company || null } }),
+    cache: "no-store",
+  });
+  const data = (await response.json()) as SupabaseAuthUser & SupabaseSessionResponse;
+
+  if (!response.ok) {
+    throw new Error(getSupabaseError(data));
+  }
+
+  if (data.id) await syncSupabaseUser(data);
+}
+
+export async function changeSupabasePassword({
+  user,
+  currentPassword,
+  newPassword,
+}: {
+  user: SessionUser;
+  currentPassword: string;
+  newPassword: string;
+}) {
+  const config = getSupabaseAuthConfig();
+  if (!config) throw new Error("Supabase Auth is not configured.");
+
+  const verifiedSession = await verifySupabasePassword(user.email, currentPassword);
+  const cookieStore = await cookies();
+  const accessToken =
+    cookieStore.get(SUPABASE_ACCESS_COOKIE)?.value ?? verifiedSession.access_token;
+
+  if (!accessToken) {
+    throw new Error("Supabase session is not available.");
+  }
+
+  const response = await fetch(`${config.url}/auth/v1/user`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: config.anonKey,
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ password: newPassword }),
+    cache: "no-store",
+  });
+  const data = (await response.json()) as SupabaseSessionResponse;
+
+  if (!response.ok) {
+    throw new Error(getSupabaseError(data));
+  }
+}
+
+export async function deleteSupabaseAuthUser({
+  user,
+  password,
+}: {
+  user: SessionUser;
+  password: string;
+}) {
+  const config = getSupabaseAuthConfig();
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!config) throw new Error("Supabase Auth is not configured.");
+  if (!serviceRoleKey) {
+    throw new Error(
+      "SUPABASE_SERVICE_ROLE_KEY is required to delete Supabase Auth users.",
+    );
+  }
+
+  await verifySupabasePassword(user.email, password);
+
+  const response = await fetch(`${config.url}/auth/v1/admin/users/${user.id}`, {
+    method: "DELETE",
+    headers: {
+      apikey: serviceRoleKey,
+      Authorization: `Bearer ${serviceRoleKey}`,
+    },
+    cache: "no-store",
+  });
+  const text = await response.text();
+
+  if (!response.ok) {
+    let message = "Supabase account could not be deleted.";
+
+    try {
+      const data = JSON.parse(text) as SupabaseSessionResponse;
+      message = getSupabaseError(data);
+    } catch {
+      // Keep the generic message when the response is not JSON.
+    }
+
+    throw new Error(message);
+  }
 }

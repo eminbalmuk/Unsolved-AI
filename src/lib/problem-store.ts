@@ -120,7 +120,7 @@ export async function getStoredProblems() {
     const records = await getPrisma().problemRecord.findMany({
       include: { sources: true },
       orderBy: [{ lastSeenAt: "desc" }, { painScore: "desc" }],
-      take: 64,
+      take: 120,
     });
 
     return records.map((record) => toProblem(record));
