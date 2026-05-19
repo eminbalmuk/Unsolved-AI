@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import type { Dictionary } from "@/lib/i18n";
 import type { ProblemAnalysis } from "@/lib/types";
 
 type AnalysisResponse = {
@@ -47,11 +48,13 @@ export function ProblemAnalysisPanel({
   initialAnalysis = null,
   initialAnalyzedAt = null,
   initialModel = null,
+  dictionary,
 }: {
   problemId: string;
   initialAnalysis?: ProblemAnalysis | null;
   initialAnalyzedAt?: string | null;
   initialModel?: string | null;
+  dictionary: Dictionary["analysis"];
 }) {
   const [analysis, setAnalysis] = useState<ProblemAnalysis | null>(initialAnalysis);
   const [analyzedAt, setAnalyzedAt] = useState<string | null>(initialAnalyzedAt);
@@ -71,7 +74,7 @@ export function ProblemAnalysisPanel({
       const data = (await response.json()) as AnalysisResponse;
 
       if (!response.ok || !data.analysis) {
-        throw new Error(data.error ?? "Analiz cevabı alınamadı.");
+        throw new Error(data.error ?? dictionary.unavailable);
       }
 
       setAnalysis(data.analysis);
@@ -81,7 +84,7 @@ export function ProblemAnalysisPanel({
       setError(
         caughtError instanceof Error
           ? caughtError.message
-          : "Analiz sırasında beklenmeyen bir hata oluştu.",
+          : dictionary.unexpectedError,
       );
     } finally {
       setIsLoading(false);
@@ -95,11 +98,10 @@ export function ProblemAnalysisPanel({
           <div>
             <CardTitle className="flex items-center gap-2 text-lg">
               <Bot className="size-5 text-primary" aria-hidden />
-              Türkçe problem analizi
+              {dictionary.title}
             </CardTitle>
             <CardDescription className="mt-2 text-base leading-7">
-              Kaynak kanıtlarını yalnızca sen istediğinde analiz eder; sonuç aynı
-              kutuda kısa Türkçe özet ve çözüm önerileri olarak görünür.
+              {dictionary.description}
             </CardDescription>
           </div>
           <Button
@@ -113,10 +115,10 @@ export function ProblemAnalysisPanel({
               <Sparkles className="size-5" aria-hidden />
             )}
             {analysis
-              ? "Analiz kayıtlı"
+              ? dictionary.saved
               : isLoading
-                ? "Analiz ediliyor..."
-                : "Analiz Et"}
+                ? dictionary.loading
+                : dictionary.action}
           </Button>
         </div>
       </CardHeader>
@@ -126,8 +128,12 @@ export function ProblemAnalysisPanel({
             <div className="flex items-start gap-3">
               <TriangleAlert className="mt-0.5 size-5 shrink-0 text-destructive" aria-hidden />
               <div>
-                <p className="font-medium text-destructive">Analiz tamamlanamadı</p>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">{error}</p>
+                <p className="font-medium text-destructive">
+                  {dictionary.failedTitle}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  {error}
+                </p>
               </div>
             </div>
           </div>
@@ -137,9 +143,9 @@ export function ProblemAnalysisPanel({
           <div className="space-y-5">
             <div className="rounded-md border bg-background/45 p-4">
               <div className="mb-3 flex flex-wrap items-center gap-2">
-                <Badge variant="secondary">Türkçe özet</Badge>
+                <Badge variant="secondary">{dictionary.summaryBadge}</Badge>
                 {model ? <Badge variant="outline">{model}</Badge> : null}
-                <Badge variant="outline">Supabase cache</Badge>
+                <Badge variant="outline">{dictionary.cacheBadge}</Badge>
                 {analyzedAt ? (
                   <span className="font-mono text-xs text-muted-foreground">
                     {new Intl.DateTimeFormat("tr", {
@@ -155,21 +161,26 @@ export function ProblemAnalysisPanel({
             </div>
 
             <div className="grid gap-5 md:grid-cols-2">
-              <BulletList title="Ağrıyı doğuran sinyaller" items={analysis.painDrivers} />
-              <BulletList title="Çözüm yöntemi önerileri" items={analysis.solutionIdeas} />
+              <BulletList
+                title={dictionary.painDrivers}
+                items={analysis.painDrivers}
+              />
+              <BulletList
+                title={dictionary.solutionIdeas}
+                items={analysis.solutionIdeas}
+              />
             </div>
 
             <Separator />
 
             <div className="grid gap-5 md:grid-cols-2">
-              <BulletList title="İlk MVP adımları" items={analysis.mvpSteps} />
-              <BulletList title="Dikkat edilmesi gereken riskler" items={analysis.risks} />
+              <BulletList title={dictionary.mvpSteps} items={analysis.mvpSteps} />
+              <BulletList title={dictionary.risks} items={analysis.risks} />
             </div>
           </div>
         ) : !error ? (
           <div className="rounded-md border border-dashed bg-background/35 p-4 text-base leading-7 text-muted-foreground">
-            Henüz API isteği yapılmadı. Problem kutusundan bu sayfaya geldikten
-            sonra analizi başlatmak için butona bas.
+            {dictionary.empty}
           </div>
         ) : null}
       </CardContent>

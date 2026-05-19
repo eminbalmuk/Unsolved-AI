@@ -51,23 +51,15 @@ const steps = [
 
 const featureCards = [
   {
-    title: "Problem radar",
-    text: "See what is rising before it becomes another crowded product category.",
     image: "/images/hero-problem-radar.webp",
   },
   {
-    title: "Market gap map",
-    text: "Compare existing tools against the complaints users still repeat every week.",
     image: "/images/market-gap-map.webp",
   },
   {
-    title: "Evidence trail",
-    text: "Trace every AI summary back to anonymized snippets and source platforms.",
     image: "/images/ai-evidence-panel.webp",
   },
   {
-    title: "Responsive workspace",
-    text: "Carry the same market board from laptop research sessions to quick mobile checks.",
     image: "/images/responsive-analytics-devices.webp",
   },
 ];
@@ -111,6 +103,10 @@ export function LandingPage({
   const localizedSteps = steps.map((step, index) => ({
     ...step,
     ...dictionary.steps[index],
+  }));
+  const localizedFeatureCards = featureCards.map((feature, index) => ({
+    ...feature,
+    ...dictionary.featureCards[index],
   }));
 
   return (
@@ -267,7 +263,7 @@ export function LandingPage({
       </section>
 
       <section className="space-y-20 py-8">
-        {featureCards.map((feature, index) => (
+        {localizedFeatureCards.map((feature, index) => (
           <Reveal key={feature.title}>
             <div className="mx-auto grid max-w-7xl items-center gap-10 px-4 sm:px-6 lg:grid-cols-2 lg:px-8">
               <div className={index % 2 ? "lg:order-2" : ""}>

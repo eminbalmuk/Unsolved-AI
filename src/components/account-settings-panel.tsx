@@ -14,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { SessionUser } from "@/lib/auth";
+import type { Dictionary } from "@/lib/i18n";
 
 type Message = {
   type: "success" | "error";
@@ -30,13 +31,20 @@ async function readApiMessage(response: Response, fallback: string) {
   }
 }
 
-export function AccountSettingsPanel({ user }: { user: SessionUser }) {
+export function AccountSettingsPanel({
+  user,
+  dictionary,
+}: {
+  user: SessionUser;
+  dictionary: Dictionary["account"];
+}) {
   const [profileMessage, setProfileMessage] = useState<Message | null>(null);
   const [passwordMessage, setPasswordMessage] = useState<Message | null>(null);
   const [deleteMessage, setDeleteMessage] = useState<Message | null>(null);
   const [isProfilePending, startProfileTransition] = useTransition();
   const [isPasswordPending, startPasswordTransition] = useTransition();
   const [isDeletePending, startDeleteTransition] = useTransition();
+  const prefersLocalErrors = dictionary.email === "E-posta";
 
   function handleProfileSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -54,12 +62,15 @@ export function AccountSettingsPanel({ user }: { user: SessionUser }) {
           }),
         });
 
-        await readApiMessage(response, "Profile could not be updated.");
-        setProfileMessage({ type: "success", text: "Profile updated." });
+        await readApiMessage(response, dictionary.profileError);
+        setProfileMessage({ type: "success", text: dictionary.profileUpdated });
       } catch (error) {
         setProfileMessage({
           type: "error",
-          text: error instanceof Error ? error.message : "Profile could not be updated.",
+          text:
+            error instanceof Error && !prefersLocalErrors
+              ? error.message
+              : dictionary.profileError,
         });
       }
     });
@@ -83,13 +94,16 @@ export function AccountSettingsPanel({ user }: { user: SessionUser }) {
           }),
         });
 
-        await readApiMessage(response, "Password could not be changed.");
+        await readApiMessage(response, dictionary.passwordError);
         form.reset();
-        setPasswordMessage({ type: "success", text: "Password changed." });
+        setPasswordMessage({ type: "success", text: dictionary.passwordChanged });
       } catch (error) {
         setPasswordMessage({
           type: "error",
-          text: error instanceof Error ? error.message : "Password could not be changed.",
+          text:
+            error instanceof Error && !prefersLocalErrors
+              ? error.message
+              : dictionary.passwordError,
         });
       }
     });
@@ -111,12 +125,15 @@ export function AccountSettingsPanel({ user }: { user: SessionUser }) {
           }),
         });
 
-        await readApiMessage(response, "Account could not be deleted.");
+        await readApiMessage(response, dictionary.deleteError);
         window.location.href = "/";
       } catch (error) {
         setDeleteMessage({
           type: "error",
-          text: error instanceof Error ? error.message : "Account could not be deleted.",
+          text:
+            error instanceof Error && !prefersLocalErrors
+              ? error.message
+              : dictionary.deleteError,
         });
       }
     });
@@ -128,16 +145,16 @@ export function AccountSettingsPanel({ user }: { user: SessionUser }) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <UserRound className="size-5 text-primary" aria-hidden />
-            Account profile
+            {dictionary.profileTitle}
           </CardTitle>
           <CardDescription>
-            Update the identity shown across your founder workspace.
+            {dictionary.profileDescription}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form className="grid gap-4" onSubmit={handleProfileSubmit}>
             <div className="grid gap-2">
-              <Label htmlFor="account-name">Name</Label>
+              <Label htmlFor="account-name">{dictionary.name}</Label>
               <Input
                 id="account-name"
                 name="name"
@@ -148,17 +165,17 @@ export function AccountSettingsPanel({ user }: { user: SessionUser }) {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="account-company">Company</Label>
+              <Label htmlFor="account-company">{dictionary.company}</Label>
               <Input
                 id="account-company"
                 name="company"
                 defaultValue={user.company ?? ""}
                 maxLength={100}
-                placeholder="Optional"
+                placeholder={dictionary.optional}
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="account-email">Email</Label>
+              <Label htmlFor="account-email">{dictionary.email}</Label>
               <Input id="account-email" value={user.email} readOnly disabled />
             </div>
             {profileMessage ? (
@@ -167,7 +184,7 @@ export function AccountSettingsPanel({ user }: { user: SessionUser }) {
               </Alert>
             ) : null}
             <Button type="submit" size="lg" disabled={isProfilePending}>
-              {isProfilePending ? "Saving..." : "Save profile"}
+              {isProfilePending ? dictionary.saving : dictionary.saveProfile}
             </Button>
           </form>
         </CardContent>
@@ -177,16 +194,16 @@ export function AccountSettingsPanel({ user }: { user: SessionUser }) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ShieldCheck className="size-5 text-primary" aria-hidden />
-            Password
+            {dictionary.passwordTitle}
           </CardTitle>
           <CardDescription>
-            Change your password without leaving the dashboard.
+            {dictionary.passwordDescription}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form className="grid gap-4" onSubmit={handlePasswordSubmit}>
             <div className="grid gap-2">
-              <Label htmlFor="current-password">Current password</Label>
+              <Label htmlFor="current-password">{dictionary.currentPassword}</Label>
               <Input
                 id="current-password"
                 name="currentPassword"
@@ -196,7 +213,7 @@ export function AccountSettingsPanel({ user }: { user: SessionUser }) {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="new-password">New password</Label>
+              <Label htmlFor="new-password">{dictionary.newPassword}</Label>
               <Input
                 id="new-password"
                 name="newPassword"
@@ -207,7 +224,7 @@ export function AccountSettingsPanel({ user }: { user: SessionUser }) {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="confirm-password">Confirm password</Label>
+              <Label htmlFor="confirm-password">{dictionary.confirmPassword}</Label>
               <Input
                 id="confirm-password"
                 name="confirmPassword"
@@ -223,7 +240,7 @@ export function AccountSettingsPanel({ user }: { user: SessionUser }) {
               </Alert>
             ) : null}
             <Button type="submit" size="lg" disabled={isPasswordPending}>
-              {isPasswordPending ? "Changing..." : "Change password"}
+              {isPasswordPending ? dictionary.changing : dictionary.changePassword}
             </Button>
           </form>
         </CardContent>
@@ -233,16 +250,16 @@ export function AccountSettingsPanel({ user }: { user: SessionUser }) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-destructive">
             <Trash2 className="size-5" aria-hidden />
-            Delete account
+            {dictionary.deleteTitle}
           </CardTitle>
           <CardDescription>
-            This removes your account and related saved workspace data.
+            {dictionary.deleteDescription}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form className="grid gap-4 md:grid-cols-[1fr_1fr_auto]" onSubmit={handleDeleteSubmit}>
             <div className="grid gap-2">
-              <Label htmlFor="delete-confirmation">Type DELETE</Label>
+              <Label htmlFor="delete-confirmation">{dictionary.typeDelete}</Label>
               <Input
                 id="delete-confirmation"
                 name="confirmation"
@@ -252,7 +269,7 @@ export function AccountSettingsPanel({ user }: { user: SessionUser }) {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="delete-password">Password</Label>
+              <Label htmlFor="delete-password">{dictionary.passwordTitle}</Label>
               <Input
                 id="delete-password"
                 name="deletePassword"
@@ -269,7 +286,7 @@ export function AccountSettingsPanel({ user }: { user: SessionUser }) {
                 disabled={isDeletePending}
                 className="w-full"
               >
-                {isDeletePending ? "Deleting..." : "Delete"}
+                {isDeletePending ? dictionary.deleting : dictionary.delete}
               </Button>
             </div>
             {deleteMessage ? (

@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { getDictionary } from "@/lib/i18n-server";
+import { translateCategory, translateStatus } from "@/lib/i18n-labels";
 import { getLiveProblemBySlug } from "@/lib/ingestion";
 import { getStoredAnalysis } from "@/lib/problem-store";
 
@@ -33,7 +35,10 @@ export default async function ProblemPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const problem = await getLiveProblemBySlug(slug);
+  const [problem, dictionary] = await Promise.all([
+    getLiveProblemBySlug(slug),
+    getDictionary(),
+  ]);
 
   if (!problem) {
     notFound();
@@ -42,9 +47,15 @@ export default async function ProblemPage({
   const storedAnalysis = await getStoredAnalysis(problem.id);
 
   const scoreRows = [
-    ["Frequency", problem.scoreBreakdown.frequency],
-    ["Emotional intensity", problem.scoreBreakdown.emotionalIntensity],
-    ["Willingness to pay", problem.scoreBreakdown.willingnessToPay],
+    [dictionary.problem.scoreRows.frequency, problem.scoreBreakdown.frequency],
+    [
+      dictionary.problem.scoreRows.emotionalIntensity,
+      problem.scoreBreakdown.emotionalIntensity,
+    ],
+    [
+      dictionary.problem.scoreRows.willingnessToPay,
+      problem.scoreBreakdown.willingnessToPay,
+    ],
   ] as const;
 
   return (
@@ -54,16 +65,23 @@ export default async function ProblemPage({
           <Button variant="ghost" asChild>
             <Link href="/">
               <ArrowLeft className="size-4" aria-hidden />
-              Back to discovery
+              {dictionary.problem.backToDiscovery}
             </Link>
           </Button>
 
           <Card className="bg-card/82">
             <CardHeader className="space-y-4">
               <div className="flex flex-wrap items-center gap-2">
-                <ScoreBadge score={problem.painScore} />
-                <Badge variant="secondary">{problem.category}</Badge>
-                <Badge variant="outline">{problem.status}</Badge>
+                <ScoreBadge
+                  score={problem.painScore}
+                  label={dictionary.common.scorePrefix}
+                />
+                <Badge variant="secondary">
+                  {translateCategory(problem.category, dictionary.common)}
+                </Badge>
+                <Badge variant="outline">
+                  {translateStatus(problem.status, dictionary.common)}
+                </Badge>
               </div>
               <div>
                 <CardTitle className="max-w-4xl text-4xl">
@@ -93,13 +111,14 @@ export default async function ProblemPage({
               initialAnalysis={storedAnalysis?.analysis ?? null}
               initialAnalyzedAt={storedAnalysis?.analyzedAt ?? null}
               initialModel={storedAnalysis?.model ?? null}
+              dictionary={dictionary.analysis}
             />
 
             <Card className="bg-card/82">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <Gauge className="size-5 text-primary" aria-hidden />
-                  Score mix
+                  {dictionary.problem.scoreMix}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -112,10 +131,10 @@ export default async function ProblemPage({
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <FileSearch className="size-5 text-primary" aria-hidden />
-                Raw source evidence
+                {dictionary.problem.rawEvidence}
               </CardTitle>
               <CardDescription>
-                Public snippets are anonymized and linked to their source type.
+                {dictionary.problem.rawEvidenceDescription}
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-3">
@@ -123,7 +142,7 @@ export default async function ProblemPage({
                 <div className="mb-2 flex items-center gap-2">
                   <Bot className="size-4 text-primary" aria-hidden />
                   <span className="text-sm font-medium">
-                    Ön analiz sinyali
+                    {dictionary.problem.preAnalysisSignal}
                   </span>
                 </div>
                 <p className="text-sm leading-6 text-muted-foreground">
@@ -145,7 +164,7 @@ export default async function ProblemPage({
                   </p>
                   <Button variant="link" className="mt-2 h-auto p-0" asChild>
                     <a href={source.url} target="_blank" rel="noreferrer">
-                      Source link
+                      {dictionary.common.sourceLink}
                       <ExternalLink className="size-3" aria-hidden />
                     </a>
                   </Button>
@@ -158,15 +177,16 @@ export default async function ProblemPage({
         <aside className="space-y-6">
           <Card className="bg-card/82">
             <CardHeader>
-              <CardTitle>Validate market intent</CardTitle>
+              <CardTitle>{dictionary.problem.validateTitle}</CardTitle>
               <CardDescription>
-                Demo state prevents duplicate validation in this session.
+                {dictionary.problem.validateDescription}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <ValidateButton
                 problemId={problem.id}
                 initialCount={problem.validationCount}
+                dictionary={dictionary.validation}
               />
             </CardContent>
           </Card>
@@ -175,7 +195,7 @@ export default async function ProblemPage({
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Layers3 className="size-5 text-primary" aria-hidden />
-                Market gaps
+                {dictionary.problem.marketGaps}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -195,7 +215,9 @@ export default async function ProblemPage({
 
           <Card className="bg-card/82">
             <CardHeader>
-              <CardTitle className="text-lg">Trend history</CardTitle>
+              <CardTitle className="text-lg">
+                {dictionary.problem.trendHistory}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <TrendChart problem={problem} />

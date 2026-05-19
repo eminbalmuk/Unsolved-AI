@@ -2,8 +2,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { AuthForm } from "@/components/auth-form";
 import { BrandLogo } from "@/components/brand-logo";
+import { getDictionary } from "@/lib/i18n-server";
 
-export function AuthPageShell({ mode }: { mode: "login" | "register" }) {
+export async function AuthPageShell({ mode }: { mode: "login" | "register" }) {
+  const dictionary = await getDictionary();
+
   return (
     <main className="relative grid min-h-screen overflow-hidden bg-background text-foreground lg:grid-cols-[0.9fr_1.1fr]">
       <div className="absolute inset-0 -z-10 dashboard-grid opacity-30" />
@@ -23,21 +26,20 @@ export function AuthPageShell({ mode }: { mode: "login" | "register" }) {
             <span>
               <span className="block text-lg font-semibold">Unsolved</span>
               <span className="block text-base text-muted-foreground">
-                Problem discovery radar
+                {dictionary.common.brandTagline}
               </span>
             </span>
           </Link>
 
           <div className="max-w-xl space-y-5">
             <p className="text-lg font-medium text-primary">
-              Founder account system
+              {dictionary.auth.sideEyebrow}
             </p>
             <h1 className="text-6xl font-semibold leading-tight">
-              Keep every validation loop tied to your workspace.
+              {dictionary.auth.sideTitle}
             </h1>
             <p className="text-xl leading-9 text-muted-foreground">
-              Save problems, validate markets, and prepare for Supabase-backed
-              reports from one secure session.
+              {dictionary.auth.sideText}
             </p>
           </div>
         </div>
@@ -51,7 +53,7 @@ export function AuthPageShell({ mode }: { mode: "login" | "register" }) {
               <span className="text-lg font-semibold">Unsolved</span>
             </Link>
           </div>
-          <AuthForm mode={mode} />
+          <AuthForm mode={mode} dictionary={dictionary.auth} />
         </div>
       </section>
     </main>

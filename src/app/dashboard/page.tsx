@@ -22,12 +22,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getCurrentUser, isAuthConfigured } from "@/lib/auth";
+import { getDictionary } from "@/lib/i18n-server";
+import { translateStatus } from "@/lib/i18n-labels";
 import { getLiveProblems } from "@/lib/ingestion";
 
 export default async function DashboardPage() {
-  const [user, liveProblems] = await Promise.all([
+  const [user, liveProblems, dictionary] = await Promise.all([
     getCurrentUser(),
     getLiveProblems(),
+    getDictionary(),
   ]);
   const authConfigured = isAuthConfigured();
   const saved = liveProblems.slice(0, 4);
@@ -44,16 +47,15 @@ export default async function DashboardPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <LockKeyhole className="size-5 text-primary" aria-hidden />
-                Sign in to use your founder workspace
+                {dictionary.dashboard.signInTitle}
               </CardTitle>
               <CardDescription className="text-base">
-                Saved problems and validations are stored in Supabase through
-                Prisma once you are signed in.
+                {dictionary.dashboard.signInDescription}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Button asChild>
-                <Link href="/login">Sign in</Link>
+                <Link href="/login">{dictionary.common.signIn}</Link>
               </Button>
             </CardContent>
           </Card>
@@ -62,11 +64,9 @@ export default async function DashboardPage() {
         {!authConfigured ? (
           <Card className="border-amber-300/30 bg-amber-400/10">
             <CardHeader>
-              <CardTitle>Auth environment is not configured yet</CardTitle>
+              <CardTitle>{dictionary.dashboard.authEnvironmentTitle}</CardTitle>
               <CardDescription className="text-base">
-                Configure Supabase Auth with `SUPABASE_URL` and
-                `SUPABASE_ANON_KEY`, or add `DATABASE_URL` plus `AUTH_SECRET`
-                for the local JWT auth fallback.
+                {dictionary.dashboard.authEnvironmentDescription}
               </CardDescription>
             </CardHeader>
           </Card>
@@ -74,55 +74,63 @@ export default async function DashboardPage() {
 
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-sm text-muted-foreground">Founder workspace</p>
+            <p className="text-sm text-muted-foreground">
+              {dictionary.dashboard.workspaceEyebrow}
+            </p>
             <h1 className="mt-2 text-4xl font-semibold">
-              Track the markets {user?.name ? `${user.name} may enter` : "you may enter"}
+              {user?.name
+                ? `${dictionary.dashboard.titleNamedPrefix} ${user.name} ${dictionary.dashboard.titleNamedSuffix}`
+                : dictionary.dashboard.titleAnonymous}
             </h1>
           </div>
           <Button>
             <Download className="size-4" aria-hidden />
-            Export CSV
+            {dictionary.dashboard.exportCsv}
           </Button>
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
           <MetricCard
             icon={BookmarkCheck}
-            label="Saved problems"
+            label={dictionary.dashboard.savedProblems}
             value={String(saved.length)}
-            hint="This workspace"
+            hint={dictionary.dashboard.thisWorkspace}
           />
           <MetricCard
             icon={CheckCircle2}
-            label="Validator pool"
+            label={dictionary.dashboard.validatorPool}
             value={String(totalValidators)}
-            hint="Across saved markets"
+            hint={dictionary.dashboard.acrossSavedMarkets}
           />
           <MetricCard
             icon={Bell}
-            label="Alerts"
+            label={dictionary.dashboard.alerts}
             value="7"
-            hint="New evidence this week"
+            hint={dictionary.dashboard.newEvidenceThisWeek}
           />
         </div>
 
-        {user ? <AccountSettingsPanel user={user} /> : null}
+        {user ? (
+          <AccountSettingsPanel user={user} dictionary={dictionary.account} />
+        ) : null}
 
         <Card className="bg-card/82">
           <CardHeader>
-            <CardTitle>Validated problem watchlist</CardTitle>
+            <CardTitle>{dictionary.dashboard.watchlistTitle}</CardTitle>
             <CardDescription>
-              Seed data mirrors the future authenticated founder dashboard.
+              {dictionary.dashboard.watchlistDescription}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Problem</TableHead>
-                  <TableHead>Score</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Validators</TableHead>
+                  <TableHead>{dictionary.dashboard.tableProblem}</TableHead>
+                  <TableHead>{dictionary.dashboard.tableScore}</TableHead>
+                  <TableHead>{dictionary.dashboard.tableStatus}</TableHead>
+                  <TableHead className="text-right">
+                    {dictionary.dashboard.tableValidators}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -140,10 +148,15 @@ export default async function DashboardPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <ScoreBadge score={problem.painScore} />
+                      <ScoreBadge
+                        score={problem.painScore}
+                        label={dictionary.common.scorePrefix}
+                      />
                     </TableCell>
                     <TableCell>
-                      <Badge variant="secondary">{problem.status}</Badge>
+                      <Badge variant="secondary">
+                        {translateStatus(problem.status, dictionary.common)}
+                      </Badge>
                     </TableCell>
                     <TableCell className="text-right font-mono">
                       {problem.validationCount}

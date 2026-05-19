@@ -328,7 +328,7 @@ function ScoreFilterPanel({
           value={minScore}
           onChange={(event) => onMinScoreChange(Number(event.target.value))}
           className="h-2 w-full cursor-pointer accent-primary"
-          aria-label="Minimum pain score"
+          aria-label={dictionary.scoreFloorAria}
         />
         <div className="grid grid-cols-4 gap-2">
           {[0, 30, 50, 70].map((value) => (
@@ -374,7 +374,7 @@ function ProblemCard({
           <CardContent className="space-y-4 p-5">
             <div className="flex items-start justify-between gap-3">
               <div className="flex flex-wrap gap-2">
-                <ScoreBadge score={problem.painScore} />
+                <ScoreBadge score={problem.painScore} label={dictionary.score} />
                 <Badge variant="secondary">{problem.category}</Badge>
               </div>
               <span className="rounded-md bg-primary/12 px-3 py-2 font-mono text-3xl font-semibold text-primary">
@@ -455,7 +455,7 @@ function BoardColumnCard({
             <div className="mb-3 flex items-center gap-2">
               <span className={`size-2.5 rounded-full ${column.accent}`} />
               <span className="font-mono text-sm uppercase tracking-[0.18em] text-muted-foreground">
-                {column.id}
+                {dictionary.columns[column.id as keyof typeof dictionary.columns].shortTitle}
               </span>
             </div>
             <h2 className="text-3xl font-semibold">{column.title}</h2>
@@ -636,7 +636,7 @@ export function DiscoveryFeed({
                 {activeSourceLabel}
               </Badge>
               <Badge variant="outline" className="px-3 py-1 text-base">
-                Score {minScore}+
+                {dictionary.score} {minScore}+
               </Badge>
             </div>
             <h1 className="mt-5 max-w-4xl text-5xl font-semibold leading-tight md:text-6xl xl:text-7xl">
@@ -819,7 +819,7 @@ export function DiscoveryFeed({
                   <Button
                     variant="outline"
                     size="icon"
-                    aria-label="Scroll board left"
+                    aria-label={dictionary.scrollLeft}
                     onClick={() => scrollBoard("left")}
                   >
                     <ChevronLeft className="size-4" aria-hidden />
@@ -827,7 +827,7 @@ export function DiscoveryFeed({
                   <Button
                     variant="outline"
                     size="icon"
-                    aria-label="Scroll board right"
+                    aria-label={dictionary.scrollRight}
                     onClick={() => scrollBoard("right")}
                   >
                     <ChevronRight className="size-4" aria-hidden />
@@ -850,9 +850,9 @@ export function DiscoveryFeed({
           ) : (
             <div className="p-6">
               <div className="rounded-md border border-dashed bg-background/35 p-8 text-center">
-                <p className="text-2xl font-semibold">Bu keşif penceresi boş.</p>
+                <p className="text-2xl font-semibold">{dictionary.emptyTitle}</p>
                 <p className="mx-auto mt-3 max-w-xl text-base leading-7 text-muted-foreground">
-                  Aramayı temizle, skor eşiğini düşür, kaynak/sektör filtresini genişlet veya daha uzun bir tarih aralığı seç.
+                  {dictionary.emptyText}
                 </p>
               </div>
             </div>

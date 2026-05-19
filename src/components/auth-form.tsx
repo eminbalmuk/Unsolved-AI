@@ -15,14 +15,22 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type { Dictionary } from "@/lib/i18n";
 
 type AuthMode = "login" | "register";
 
-export function AuthForm({ mode }: { mode: AuthMode }) {
+export function AuthForm({
+  mode,
+  dictionary,
+}: {
+  mode: AuthMode;
+  dictionary: Dictionary["auth"];
+}) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const isRegister = mode === "register";
+  const prefersLocalErrors = dictionary.email === "E-posta";
 
   function submit(formData: FormData) {
     setError(null);
@@ -46,7 +54,11 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
       const result = (await response.json()) as { error?: string };
 
       if (!response.ok) {
-        setError(result.error ?? "Authentication failed.");
+        setError(
+          prefersLocalErrors
+            ? dictionary.authFailed
+            : result.error ?? dictionary.authFailed,
+        );
         return;
       }
 
@@ -59,12 +71,12 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
     <Card className="w-full max-w-md bg-card/82 backdrop-blur">
       <CardHeader>
         <CardTitle className="text-3xl">
-          {isRegister ? "Create your account" : "Welcome back"}
+          {isRegister ? dictionary.registerTitle : dictionary.loginTitle}
         </CardTitle>
         <CardDescription className="text-base">
           {isRegister
-            ? "Start tracking real market pain signals with a founder workspace."
-            : "Sign in to continue your validation workflow."}
+            ? dictionary.registerDescription
+            : dictionary.loginDescription}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -72,14 +84,14 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
           {error ? (
             <Alert variant="destructive">
               <AlertCircle className="size-4" aria-hidden />
-              <AlertTitle>Authentication unavailable</AlertTitle>
+              <AlertTitle>{dictionary.authUnavailable}</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           ) : null}
 
           {isRegister ? (
             <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
+              <Label htmlFor="name">{dictionary.name}</Label>
               <div className="relative">
                 <UserRound className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -95,7 +107,7 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
           ) : null}
 
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{dictionary.email}</Label>
             <div className="relative">
               <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -110,7 +122,7 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">{dictionary.password}</Label>
             <div className="relative">
               <LockKeyhole className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -120,19 +132,23 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
                 required
                 minLength={isRegister ? 8 : 1}
                 className="h-12 pl-10 text-base"
-                placeholder={isRegister ? "At least 8 characters" : "Your password"}
+                placeholder={
+                  isRegister
+                    ? dictionary.passwordRegisterPlaceholder
+                    : dictionary.passwordLoginPlaceholder
+                }
               />
             </div>
           </div>
 
           {isRegister ? (
             <div className="space-y-2">
-              <Label htmlFor="company">Company</Label>
+              <Label htmlFor="company">{dictionary.company}</Label>
               <Input
                 id="company"
                 name="company"
                 className="h-12 text-base"
-                placeholder="Optional"
+                placeholder={dictionary.companyPlaceholder}
               />
             </div>
           ) : null}
@@ -141,17 +157,17 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
             {isPending ? (
               <Loader2 className="size-4 animate-spin" aria-hidden />
             ) : null}
-            {isRegister ? "Create account" : "Sign in"}
+            {isRegister ? dictionary.createAccount : dictionary.signIn}
           </Button>
         </form>
 
         <p className="mt-6 text-center text-base text-muted-foreground">
-          {isRegister ? "Already have an account?" : "No account yet?"}{" "}
+          {isRegister ? dictionary.alreadyHaveAccount : dictionary.noAccountYet}{" "}
           <Link
             href={isRegister ? "/login" : "/register"}
             className="font-medium text-primary hover:underline"
           >
-            {isRegister ? "Sign in" : "Create one"}
+            {isRegister ? dictionary.signIn : dictionary.createOne}
           </Link>
         </p>
       </CardContent>

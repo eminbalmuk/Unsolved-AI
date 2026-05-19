@@ -1,7 +1,13 @@
 import { Badge } from "@/components/ui/badge";
 import { scoreTone } from "@/lib/scoring";
 
-export function ScoreBadge({ score }: { score: number }) {
+export function ScoreBadge({
+  score,
+  label = "Pain",
+}: {
+  score: number;
+  label?: string;
+}) {
   const tone = scoreTone(score);
   const className =
     tone === "critical"
@@ -14,7 +20,7 @@ export function ScoreBadge({ score }: { score: number }) {
 
   return (
     <Badge variant="outline" className={className}>
-      Pain {score}
+      {label} {score}
     </Badge>
   );
 }

@@ -18,15 +18,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { getDictionary } from "@/lib/i18n-server";
+import { translateStatus } from "@/lib/i18n-labels";
 import { pipelineStatuses, problems } from "@/lib/data";
 
-const weights = [
-  { label: "Frequency", value: 35 },
-  { label: "Emotional intensity", value: 45 },
-  { label: "Willingness to pay", value: 20 },
-];
-
-export default function AdminPage() {
+export default async function AdminPage() {
+  const dictionary = await getDictionary();
+  const weights = [
+    { label: dictionary.admin.weights.frequency, value: 35 },
+    { label: dictionary.admin.weights.emotionalIntensity, value: 45 },
+    { label: dictionary.admin.weights.willingnessToPay, value: 20 },
+  ];
   const warningCount = pipelineStatuses.filter(
     (status) => status.status !== "healthy",
   ).length;
@@ -35,49 +37,49 @@ export default function AdminPage() {
     <AppShell>
       <div className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
         <div>
-          <p className="text-sm text-muted-foreground">Internal operations</p>
+          <p className="text-sm text-muted-foreground">{dictionary.admin.eyebrow}</p>
           <h1 className="mt-2 text-4xl font-semibold">
-            Pipeline health and scoring controls
+            {dictionary.admin.title}
           </h1>
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
           <MetricCard
             icon={Database}
-            label="Raw signals"
+            label={dictionary.admin.rawSignals}
             value="644"
-            hint="Backed up before analysis"
+            hint={dictionary.admin.rawSignalsHint}
           />
           <MetricCard
             icon={Bot}
-            label="LLM clusters"
+            label={dictionary.admin.llmClusters}
             value={String(problems.length)}
-            hint="SaaS MVP scope"
+            hint={dictionary.admin.llmClustersHint}
           />
           <MetricCard
             icon={AlertTriangle}
-            label="Warnings"
+            label={dictionary.admin.warnings}
             value={String(warningCount)}
-            hint="Needs operator review"
+            hint={dictionary.admin.warningsHint}
           />
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
           <Card className="bg-card/82">
             <CardHeader>
-              <CardTitle>Service status</CardTitle>
+              <CardTitle>{dictionary.admin.serviceStatus}</CardTitle>
               <CardDescription>
-                Mocked operational view for ingestion and AI pipeline health.
+                {dictionary.admin.serviceDescription}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Service</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Success</TableHead>
-                    <TableHead>Latency</TableHead>
+                    <TableHead>{dictionary.admin.service}</TableHead>
+                    <TableHead>{dictionary.admin.status}</TableHead>
+                    <TableHead>{dictionary.admin.success}</TableHead>
+                    <TableHead>{dictionary.admin.latency}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -90,7 +92,7 @@ export default function AdminPage() {
                             status.status === "healthy" ? "secondary" : "outline"
                           }
                         >
-                          {status.status}
+                          {translateStatus(status.status, dictionary.common)}
                         </Badge>
                       </TableCell>
                       <TableCell className="min-w-36">
@@ -115,10 +117,10 @@ export default function AdminPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <SlidersHorizontal className="size-5 text-primary" aria-hidden />
-                Pain Score weights
+                {dictionary.admin.weightsTitle}
               </CardTitle>
               <CardDescription>
-                Admin-editable in the future NestJS API layer.
+                {dictionary.admin.weightsDescription}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">

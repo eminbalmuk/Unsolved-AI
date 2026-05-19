@@ -18,9 +18,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { weeklyReport } from "@/lib/data";
 import { getCurrentUser, isAuthConfigured } from "@/lib/auth";
+import { getDictionary } from "@/lib/i18n-server";
 
 export default async function ReportsPage() {
-  const user = await getCurrentUser();
+  const [user, dictionary] = await Promise.all([
+    getCurrentUser(),
+    getDictionary(),
+  ]);
   const authConfigured = isAuthConfigured();
 
   return (
@@ -29,22 +33,22 @@ export default async function ReportsPage() {
         <aside className="space-y-6">
           <Card className="bg-card/82">
             <CardHeader>
-              <CardTitle>B2B report setup</CardTitle>
+              <CardTitle>{dictionary.reports.setupTitle}</CardTitle>
               <CardDescription>
-                Demo configuration for weekly Monday reports.
+                {dictionary.reports.setupDescription}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="company">Company</Label>
+                <Label htmlFor="company">{dictionary.reports.company}</Label>
                 <Input id="company" defaultValue={weeklyReport.company} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="sector">Sector</Label>
+                <Label htmlFor="sector">{dictionary.reports.sector}</Label>
                 <Input id="sector" defaultValue={weeklyReport.sector} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="competitors">Competitors</Label>
+                <Label htmlFor="competitors">{dictionary.reports.competitors}</Label>
                 <Textarea
                   id="competitors"
                   defaultValue="Intercom, Stripe Billing, Amplitude"
@@ -52,16 +56,16 @@ export default async function ReportsPage() {
               </div>
               <Button className="w-full">
                 <MailCheck className="size-4" aria-hidden />
-                Schedule weekly report
+                {dictionary.reports.schedule}
               </Button>
             </CardContent>
           </Card>
 
           <MetricCard
             icon={KeyRound}
-            label="API access"
-            value="Ready"
-            hint="Interface stub for Enterprise"
+            label={dictionary.reports.apiAccess}
+            value={dictionary.reports.ready}
+            hint={dictionary.reports.enterpriseStub}
           />
         </aside>
 
@@ -71,55 +75,56 @@ export default async function ReportsPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <LockKeyhole className="size-5 text-primary" aria-hidden />
-                  Sign in to configure B2B reports
+                  {dictionary.reports.signInTitle}
                 </CardTitle>
                 <CardDescription className="text-base">
-                  Report settings will be stored per account once Supabase is
-                  connected.
+                  {dictionary.reports.signInDescription}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <Button asChild>
-                  <Link href="/login">Sign in</Link>
+                  <Link href="/login">{dictionary.common.signIn}</Link>
                 </Button>
               </CardContent>
             </Card>
           ) : null}
 
           <div>
-            <p className="text-sm text-muted-foreground">Weekly B2B preview</p>
+            <p className="text-sm text-muted-foreground">
+              {dictionary.reports.previewEyebrow}
+            </p>
             <h1 className="mt-2 text-4xl font-semibold">
-              Market signals for {weeklyReport.company}
+              {dictionary.reports.marketSignalsFor} {weeklyReport.company}
             </h1>
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
             <MetricCard
               icon={Building2}
-              label="Tracked sector"
+              label={dictionary.reports.trackedSector}
               value="B2B"
-              hint="SaaS only MVP"
+              hint={dictionary.reports.saasOnlyMvp}
             />
             <MetricCard
               icon={FileText}
-              label="Top problems"
+              label={dictionary.reports.topProblems}
               value="5"
-              hint="Included in PDF"
+              hint={dictionary.reports.includedInPdf}
             />
             <MetricCard
               icon={MailCheck}
-              label="Delivery"
+              label={dictionary.reports.delivery}
               value="09:00"
-              hint="Every Monday"
+              hint={dictionary.reports.everyMonday}
             />
           </div>
 
           <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
             <Card className="bg-card/82">
               <CardHeader>
-                <CardTitle>Week-over-week trend changes</CardTitle>
+                <CardTitle>{dictionary.reports.trendTitle}</CardTitle>
                 <CardDescription>
-                  Mock trend deltas for the strongest market themes.
+                  {dictionary.reports.trendDescription}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -129,9 +134,9 @@ export default async function ReportsPage() {
 
             <Card className="bg-card/82">
               <CardHeader>
-                <CardTitle>Competitor signal summary</CardTitle>
+                <CardTitle>{dictionary.reports.competitorSummary}</CardTitle>
                 <CardDescription>
-                  Forum complaints grouped for report output.
+                  {dictionary.reports.competitorDescription}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -152,7 +157,7 @@ export default async function ReportsPage() {
 
           <Card className="bg-card/82">
             <CardHeader>
-              <CardTitle>Highest scored problems</CardTitle>
+              <CardTitle>{dictionary.reports.highestScored}</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-3">
               {weeklyReport.topProblems.map((problem) => (
@@ -162,9 +167,12 @@ export default async function ReportsPage() {
                 >
                   <span className="font-medium">{problem.title}</span>
                   <div className="flex items-center gap-3">
-                    <ScoreBadge score={problem.painScore} />
+                    <ScoreBadge
+                      score={problem.painScore}
+                      label={dictionary.common.scorePrefix}
+                    />
                     <span className="font-mono text-sm text-muted-foreground">
-                      {problem.validationCount} validators
+                      {problem.validationCount} {dictionary.common.validators}
                     </span>
                   </div>
                 </div>
