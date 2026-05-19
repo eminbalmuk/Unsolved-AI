@@ -23,6 +23,8 @@ export const dictionaries = {
       signIn: "Sign in",
       signOut: "Sign out",
       createAccount: "Create account",
+      lightTheme: "Light theme",
+      darkTheme: "Dark theme",
     },
     landing: {
       badge: "Problem-driven discovery for SaaS founders",
@@ -168,10 +170,12 @@ export const dictionaries = {
       signIn: "Giriş yap",
       signOut: "Çıkış yap",
       createAccount: "Hesap oluştur",
+      lightTheme: "Açık tema",
+      darkTheme: "Koyu tema",
     },
     landing: {
       badge: "SaaS kurucuları için problem odaklı keşif",
-      headline: "Tahmin etmeyi bırak. İnsanların zaten yazdığı acıdan başla.",
+      headline: "Proje fikri aramayı bırak. İnsanların güncel yaşadığı problemlerden başla.",
       subhead:
         "Unsolved herkese açık şikayetleri tarar, tekrarlanan ihtiyaçları kümeler ve inceleyip doğrulayabileceğin fırsat sinyallerine dönüştürür.",
       openExplora: "Explora'yı aç",

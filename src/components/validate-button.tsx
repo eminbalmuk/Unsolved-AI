@@ -69,7 +69,7 @@ export function ValidateButton({
         {state.validationCount} founders are tracking this market.
       </p>
       {isSaturated ? (
-        <p className="rounded-md border border-amber-300/30 bg-amber-400/10 p-3 text-sm text-amber-100">
+        <p className="rounded-md border border-amber-500/35 bg-amber-400/12 p-3 text-sm text-amber-800 dark:border-amber-300/30 dark:bg-amber-400/10 dark:text-amber-100">
           This market is approaching saturation. Move with a sharper wedge.
         </p>
       ) : null}

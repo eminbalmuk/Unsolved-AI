@@ -116,7 +116,7 @@ export function LandingPage({
   return (
     <div className="overflow-hidden">
       <section
-        className="relative isolate min-h-[calc(100vh-5rem)] overflow-hidden border-b bg-black bg-cover bg-center bg-no-repeat"
+        className="relative isolate min-h-[calc(100vh-5rem)] overflow-hidden border-b bg-background bg-cover bg-center bg-no-repeat dark:bg-black"
         style={{ backgroundImage: "url('/images/landing-black-hero-bg.webp')" }}
       >
         <motion.div
@@ -128,11 +128,12 @@ export function LandingPage({
             alt="Black cinematic analytics background"
             fill
             priority
-            className="object-cover opacity-95 brightness-125 contrast-110"
+            className="object-cover opacity-25 brightness-110 contrast-95 dark:opacity-95 dark:brightness-125 dark:contrast-110"
             sizes="100vw"
           />
-          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.78)_0%,rgba(0,0,0,0.48)_42%,rgba(0,0,0,0.06)_100%)]" />
-          <div className="absolute inset-0 bg-[linear-gradient(0deg,var(--background)_0%,rgba(0,0,0,0)_24%,rgba(0,0,0,0.12)_100%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,color-mix(in_oklch,var(--background)_92%,transparent)_0%,color-mix(in_oklch,var(--background)_72%,transparent)_42%,color-mix(in_oklch,var(--background)_20%,transparent)_100%)] dark:hidden" />
+          <div className="absolute inset-0 hidden bg-[linear-gradient(90deg,rgba(0,0,0,0.78)_0%,rgba(0,0,0,0.48)_42%,rgba(0,0,0,0.06)_100%)] dark:block" />
+          <div className="absolute inset-0 bg-[linear-gradient(0deg,var(--background)_0%,color-mix(in_oklch,var(--background)_0%,transparent)_24%,color-mix(in_oklch,var(--background)_12%,transparent)_100%)] dark:bg-[linear-gradient(0deg,var(--background)_0%,rgba(0,0,0,0)_24%,rgba(0,0,0,0.12)_100%)]" />
         </motion.div>
 
         <div className="relative z-10 mx-auto grid min-h-[calc(100vh-5rem)] max-w-7xl items-center gap-12 px-4 py-16 sm:px-6 lg:grid-cols-[1fr_0.85fr] lg:px-8">
@@ -151,7 +152,7 @@ export function LandingPage({
                 <h1 className="text-6xl font-semibold leading-[0.98] sm:text-7xl lg:text-8xl 2xl:text-9xl">
                   {dictionary.headline}
                 </h1>
-                <p className="max-w-3xl text-2xl leading-10 text-muted-foreground 2xl:text-3xl 2xl:leading-[3.25rem]">
+                <p className="max-w-3xl text-2xl leading-10 text-muted-foreground 2xl:text-3xl 2xl:leading-3.25rem">
                   {dictionary.subhead}
                 </p>
               </div>
@@ -196,7 +197,7 @@ export function LandingPage({
                   alt="AI evidence panel"
                   width={760}
                   height={860}
-                  className="aspect-[4/5] rounded-md object-cover"
+                  className="aspect-4/5 rounded-md object-cover"
                   priority
                 />
               </div>
@@ -307,7 +308,7 @@ export function LandingPage({
                   alt={`${feature.title} visual`}
                   width={1100}
                   height={720}
-                  className="aspect-[16/10] rounded-md object-cover"
+                  className="aspect-16/10 rounded-md object-cover"
                   sizes="(min-width: 1024px) 50vw, 100vw"
                 />
               </motion.div>
