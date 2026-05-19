@@ -22,12 +22,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import type { Dictionary } from "@/lib/i18n";
 
-const stats = [
-  { label: "live signals", value: "48+" },
-  { label: "market lanes", value: "4" },
-  { label: "avg. Pain Score", value: "81" },
-];
+export type LandingStats = {
+  liveSignals: number;
+  marketLanes: number;
+  averagePainScore: number;
+  risingPainScore: number;
+};
 
 const steps = [
   {
@@ -90,11 +92,26 @@ function Reveal({
   );
 }
 
-export function LandingPage() {
+export function LandingPage({
+  stats,
+  dictionary,
+}: {
+  stats: LandingStats;
+  dictionary: Dictionary["landing"];
+}) {
   const { scrollYProgress } = useScroll();
   const heroY = useTransform(scrollYProgress, [0, 0.35], [0, 120]);
   const heroScale = useTransform(scrollYProgress, [0, 0.35], [1, 1.08]);
   const signalY = useTransform(scrollYProgress, [0.12, 0.72], [80, -80]);
+  const statCards = [
+    { label: dictionary.stats.liveSignals, value: stats.liveSignals.toLocaleString("en") },
+    { label: dictionary.stats.marketLanes, value: String(stats.marketLanes) },
+    { label: dictionary.stats.averagePain, value: String(stats.averagePainScore) },
+  ];
+  const localizedSteps = steps.map((step, index) => ({
+    ...step,
+    ...dictionary.steps[index],
+  }));
 
   return (
     <div className="overflow-hidden">
@@ -126,18 +143,16 @@ export function LandingPage() {
                 className="gap-2 bg-card/60 px-4 py-2 text-base backdrop-blur"
               >
                 <Sparkles className="size-4 text-primary" aria-hidden />
-                Problem-driven discovery for SaaS founders
+                {dictionary.badge}
               </Badge>
             </Reveal>
             <Reveal delay={0.08}>
               <div className="space-y-6">
                 <h1 className="text-6xl font-semibold leading-[0.98] sm:text-7xl lg:text-8xl 2xl:text-9xl">
-                  Stop guessing. Start from the pain people already posted.
+                  {dictionary.headline}
                 </h1>
                 <p className="max-w-3xl text-2xl leading-10 text-muted-foreground 2xl:text-3xl 2xl:leading-[3.25rem]">
-                  Unsolved scans public frustration, clusters repeated needs,
-                  and turns them into opportunity signals you can inspect,
-                  validate, and act on.
+                  {dictionary.subhead}
                 </p>
               </div>
             </Reveal>
@@ -145,7 +160,7 @@ export function LandingPage() {
               <div className="flex flex-col gap-3 sm:flex-row">
                 <Button size="lg" className="h-14 text-lg" asChild>
                   <Link href="/explora">
-                    Open Explora
+                    {dictionary.openExplora}
                     <ArrowRight className="size-5" aria-hidden />
                   </Link>
                 </Button>
@@ -155,7 +170,7 @@ export function LandingPage() {
                   className="h-14 text-lg"
                   asChild
                 >
-                  <Link href="/reports">Preview B2B report</Link>
+                  <Link href="/reports">{dictionary.previewReport}</Link>
                 </Button>
               </div>
             </Reveal>
@@ -167,11 +182,13 @@ export function LandingPage() {
                 style={{ y: signalY }}
                 className="absolute -left-10 top-16 z-10 rounded-lg border bg-background/84 p-5 backdrop-blur-xl surface-glow"
               >
-                <p className="text-base text-muted-foreground">Rising signal</p>
-                <p className="mt-1 font-mono text-4xl font-semibold text-primary">
-                  87
+                <p className="text-base text-muted-foreground">
+                  {dictionary.risingSignal}
                 </p>
-                <p className="mt-1 text-base">Pain Score</p>
+                <p className="mt-1 font-mono text-4xl font-semibold text-primary">
+                  {stats.risingPainScore}
+                </p>
+                <p className="mt-1 text-base">{dictionary.painScore}</p>
               </motion.div>
               <div className="relative overflow-hidden rounded-lg border bg-card/55 p-4 backdrop-blur-xl surface-glow">
                 <Image
@@ -190,7 +207,7 @@ export function LandingPage() {
 
       <section className="border-b py-10">
         <div className="mx-auto grid max-w-7xl gap-4 px-4 sm:px-6 md:grid-cols-3 lg:px-8">
-          {stats.map((stat, index) => (
+          {statCards.map((stat, index) => (
             <Reveal key={stat.label} delay={index * 0.06}>
               <motion.div
                 whileHover={{ y: -8, scale: 1.015 }}
@@ -212,15 +229,17 @@ export function LandingPage() {
       <section className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
         <Reveal>
           <div className="max-w-3xl">
-            <p className="text-lg font-medium text-primary">How it works</p>
+            <p className="text-lg font-medium text-primary">
+              {dictionary.howItWorks}
+            </p>
             <h2 className="mt-3 text-5xl font-semibold leading-tight md:text-6xl">
-              From scattered complaints to ranked opportunity.
+              {dictionary.howHeadline}
             </h2>
           </div>
         </Reveal>
 
         <div className="mt-12 grid gap-5 md:grid-cols-3">
-          {steps.map((step, index) => (
+          {localizedSteps.map((step, index) => (
             <Reveal key={step.title} delay={index * 0.08}>
               <motion.div
                 whileHover={{ y: -10, rotateX: 2 }}
@@ -263,15 +282,15 @@ export function LandingPage() {
                 <div className="mt-8 grid gap-3 text-xl text-muted-foreground">
                   <span className="flex items-center gap-3">
                     <CheckCircle2 className="size-5 text-primary" aria-hidden />
-                    Source-backed summaries
+                    {dictionary.featureBullets[0]}
                   </span>
                   <span className="flex items-center gap-3">
                     <CheckCircle2 className="size-5 text-primary" aria-hidden />
-                    Market saturation warnings
+                    {dictionary.featureBullets[1]}
                   </span>
                   <span className="flex items-center gap-3">
                     <CheckCircle2 className="size-5 text-primary" aria-hidden />
-                    Founder validation loop
+                    {dictionary.featureBullets[2]}
                   </span>
                 </div>
               </div>
@@ -304,20 +323,19 @@ export function LandingPage() {
             <div>
               <p className="flex items-center gap-2 text-lg font-medium text-primary">
                 <TrendingUp className="size-5" aria-hidden />
-                Build from demand, not vibes
+                {dictionary.ctaEyebrow}
               </p>
               <h2 className="mt-4 text-5xl font-semibold leading-tight md:text-6xl">
-                Explore the first SaaS pain map.
+                {dictionary.ctaTitle}
               </h2>
               <p className="mt-5 max-w-2xl text-2xl leading-10 text-muted-foreground">
-                Explora now uses live public signals and arranges them as a
-                horizontal board built for repeated product research sessions.
+                {dictionary.ctaText}
               </p>
             </div>
             <div className="grid gap-3">
               <Button size="lg" className="h-14 text-lg" asChild>
                 <Link href="/explora">
-                  Launch Explora
+                  {dictionary.launchExplora}
                   <Search className="size-5" aria-hidden />
                 </Link>
               </Button>
@@ -327,7 +345,7 @@ export function LandingPage() {
                 className="h-14 text-lg"
                 asChild
               >
-                <Link href="/dashboard">View founder dashboard</Link>
+                <Link href="/dashboard">{dictionary.viewDashboard}</Link>
               </Button>
             </div>
           </div>

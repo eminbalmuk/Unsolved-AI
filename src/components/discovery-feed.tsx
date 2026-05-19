@@ -8,6 +8,7 @@ import {
   ArrowUpDown,
   CalendarClock,
   CalendarDays,
+  ChevronLeft,
   ChevronRight,
   Filter,
   Flame,
@@ -32,6 +33,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScoreBadge } from "@/components/score-badge";
 import { TrendChart } from "@/components/charts";
 import { formatDateLabel } from "@/lib/scoring";
+import type { Dictionary } from "@/lib/i18n";
 import type { Problem, SourcePlatform } from "@/lib/types";
 
 type SortMode = "pain" | "new" | "validated";
@@ -52,6 +54,7 @@ type ProblemsResponse = {
   refreshMode: "live" | "cached";
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const timeWindowOptions: { value: TimeWindow; label: string }[] = [
   { value: "today", label: "Bugün" },
   { value: "3d", label: "Son 3 gün" },
@@ -60,6 +63,7 @@ const timeWindowOptions: { value: TimeWindow; label: string }[] = [
   { value: "all", label: "Tümü" },
 ];
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const sourceFilterOptions: { value: SourceFilter; label: string }[] = [
   { value: "all", label: "Tüm kaynaklar" },
   { value: "Reddit", label: "Sadece Reddit" },
@@ -104,37 +108,54 @@ function sortProblems(problems: Problem[], sort: SortMode) {
   });
 }
 
-function buildColumns(problems: Problem[], sort: SortMode): BoardColumn[] {
+function getCriticalFloor(problems: Problem[]) {
+  if (problems.length === 0) return 0;
+
+  const sortedScores = problems
+    .map((problem) => problem.painScore)
+    .sort((a, b) => a - b);
+  const percentileIndex = Math.max(0, Math.floor(sortedScores.length * 0.85));
+
+  return Math.max(40, sortedScores[percentileIndex] ?? sortedScores.at(-1) ?? 0);
+}
+
+function buildColumns(
+  problems: Problem[],
+  sort: SortMode,
+  dictionary: Dictionary["discovery"],
+): BoardColumn[] {
   const newestCutoff = Date.now() - 1000 * 60 * 60 * 24 * 7;
+  const criticalFloor = getCriticalFloor(problems);
 
   const columns: BoardColumn[] = [
     {
       id: "critical",
-      title: "Critical pain",
-      description: "High urgency signals with the strongest weighted pain.",
+      title: dictionary.columns.critical.title,
+      description: dictionary.columns.critical.description,
       accent: "bg-red-400",
-      problems: problems.filter((problem) => problem.painScore >= 55),
+      problems: problems.filter((problem) => problem.painScore >= criticalFloor),
     },
     {
       id: "rising",
-      title: "Rising signals",
-      description: "Problems gaining traction but still early enough to enter.",
+      title: dictionary.columns.rising.title,
+      description: dictionary.columns.rising.description,
       accent: "bg-primary",
       problems: problems.filter(
-        (problem) => problem.painScore < 55 && problem.painScore >= 35,
+        (problem) =>
+          problem.painScore < criticalFloor && problem.painScore >= 35,
       ),
     },
     {
       id: "watch",
-      title: "Watchlist",
-      description: "Lower-score signals worth scanning before they cluster.",
+      title: dictionary.columns.watch.title,
+      description: dictionary.columns.watch.description,
       accent: "bg-sky-300",
       problems: problems.filter((problem) => problem.painScore < 35),
     },
     {
       id: "fresh",
-      title: "Fresh evidence",
-      description: "Recent public posts and reviews from the last 7 days.",
+      title: dictionary.columns.fresh.title,
+      description: dictionary.columns.fresh.description,
       accent: "bg-amber-300",
       problems: problems.filter(
         (problem) => new Date(problem.lastSeenAt).getTime() >= newestCutoff,
@@ -142,8 +163,8 @@ function buildColumns(problems: Problem[], sort: SortMode): BoardColumn[] {
     },
     {
       id: "validated",
-      title: "Validated interest",
-      description: "Cards with stronger social proof or validation count.",
+      title: dictionary.columns.validated.title,
+      description: dictionary.columns.validated.description,
       accent: "bg-emerald-300",
       problems: problems.filter((problem) => problem.validationCount >= 30),
     },
@@ -158,26 +179,28 @@ function buildColumns(problems: Problem[], sort: SortMode): BoardColumn[] {
 function FilterPanel({
   sort,
   onSortChange,
+  dictionary,
 }: {
   sort: SortMode;
   onSortChange: (value: SortMode) => void;
+  dictionary: Dictionary["discovery"];
 }) {
   return (
     <Card className="bg-card/84">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-xl">
           <ArrowUpDown className="size-5 text-primary" aria-hidden />
-          Sort board
+          {dictionary.sortBoard}
         </CardTitle>
         <CardDescription className="text-lg leading-7">
-          Re-rank every column by the signal that matters right now.
+          {dictionary.sortDescription}
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
         {[
-          ["pain", "Highest Pain Score"],
-          ["new", "Newest evidence"],
-          ["validated", "Most validated"],
+          ["pain", dictionary.sortPain],
+          ["new", dictionary.sortNew],
+          ["validated", dictionary.sortValidated],
         ].map(([value, label]) => (
           <Button
             key={value}
@@ -196,23 +219,27 @@ function FilterPanel({
 function TimeWindowPanel({
   window,
   onWindowChange,
+  options,
+  dictionary,
 }: {
   window: TimeWindow;
   onWindowChange: (value: TimeWindow) => void;
+  options: { value: TimeWindow; label: string }[];
+  dictionary: Dictionary["discovery"];
 }) {
   return (
     <Card className="bg-card/84">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-xl">
           <CalendarDays className="size-5 text-primary" aria-hidden />
-          Pain window
+          {dictionary.painWindow}
         </CardTitle>
         <CardDescription className="text-lg leading-7">
           En kritik problemi seçmek için kaynak tarih aralığını daralt.
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-2">
-        {timeWindowOptions.map((option) => (
+        {options.map((option) => (
           <Button
             key={option.value}
             variant={window === option.value ? "default" : "secondary"}
@@ -230,23 +257,27 @@ function TimeWindowPanel({
 function SourceFilterPanel({
   source,
   onSourceChange,
+  options,
+  dictionary,
 }: {
   source: SourceFilter;
   onSourceChange: (value: SourceFilter) => void;
+  options: { value: SourceFilter; label: string }[];
+  dictionary: Dictionary["discovery"];
 }) {
   return (
     <Card className="bg-card/84">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-xl">
           <Radio className="size-5 text-primary" aria-hidden />
-          Source
+          {dictionary.source}
         </CardTitle>
         <CardDescription className="text-lg leading-7">
           Reddit, HackerNews veya App Store sinyallerini ayır.
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-2">
-        {sourceFilterOptions.map((option) => (
+        {options.map((option) => (
           <Button
             key={option.value}
             variant={source === option.value ? "default" : "secondary"}
@@ -264,16 +295,18 @@ function SourceFilterPanel({
 function ScoreFilterPanel({
   minScore,
   onMinScoreChange,
+  dictionary,
 }: {
   minScore: number;
   onMinScoreChange: (value: number) => void;
+  dictionary: Dictionary["discovery"];
 }) {
   return (
     <Card className="bg-card/84">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-xl">
           <SlidersHorizontal className="size-5 text-primary" aria-hidden />
-          Score floor
+          {dictionary.scoreFloor}
         </CardTitle>
         <CardDescription className="text-lg leading-7">
           En düşük problem skorunu sen belirle.
@@ -317,9 +350,11 @@ function ScoreFilterPanel({
 function ProblemCard({
   problem,
   index,
+  dictionary,
 }: {
   problem: Problem;
   index: number;
+  dictionary: Dictionary["discovery"];
 }) {
   return (
     <motion.article
@@ -371,7 +406,7 @@ function ProblemCard({
               </span>
               <span className="flex items-center gap-2">
                 <Users className="size-4" aria-hidden />
-                {problem.validationCount} validators
+                {problem.validationCount} {dictionary.validators}
               </span>
               <span className="flex flex-wrap items-center gap-2">
                 {problem.sourcePlatforms.map((platform) => (
@@ -384,10 +419,10 @@ function ProblemCard({
 
             <div className="flex items-center justify-between border-t pt-4 text-base">
               <span className="text-muted-foreground">
-                {problem.sourceCount} public signals
+                {problem.sourceCount} {dictionary.publicSignalsCount}
               </span>
               <span className="flex items-center gap-1 font-medium text-primary">
-                Inspect
+                {dictionary.inspect}
                 <ChevronRight className="size-4" aria-hidden />
               </span>
             </div>
@@ -398,9 +433,16 @@ function ProblemCard({
   );
 }
 
-function BoardColumnCard({ column }: { column: BoardColumn }) {
+function BoardColumnCard({
+  column,
+  dictionary,
+}: {
+  column: BoardColumn;
+  dictionary: Dictionary["discovery"];
+}) {
   return (
     <motion.section
+      id={`board-column-${column.id}`}
       layout
       initial={{ opacity: 0, x: 36 }}
       animate={{ opacity: 1, x: 0 }}
@@ -434,6 +476,7 @@ function BoardColumnCard({ column }: { column: BoardColumn }) {
               key={`${column.id}-${problem.id}`}
               problem={problem}
               index={index}
+              dictionary={dictionary}
             />
           ))
         ) : (
@@ -448,9 +491,12 @@ function BoardColumnCard({ column }: { column: BoardColumn }) {
 
 export function DiscoveryFeed({
   problems,
+  dictionary,
 }: {
   problems: Problem[];
+  dictionary: Dictionary["discovery"];
 }) {
+  const boardScrollerId = "explora-board-scroller";
   const [currentProblems, setCurrentProblems] = useState(problems);
   const [query, setQuery] = useState("");
   const [sector, setSector] = useState("all");
@@ -461,6 +507,19 @@ export function DiscoveryFeed({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefreshedAt, setLastRefreshedAt] = useState<string | null>(null);
   const [refreshError, setRefreshError] = useState<string | null>(null);
+  const timeWindowOptions: { value: TimeWindow; label: string }[] = [
+    { value: "today", label: dictionary.windows.today },
+    { value: "3d", label: dictionary.windows.threeDays },
+    { value: "7d", label: dictionary.windows.week },
+    { value: "30d", label: dictionary.windows.month },
+    { value: "all", label: dictionary.windows.all },
+  ];
+  const sourceFilterOptions: { value: SourceFilter; label: string }[] = [
+    { value: "all", label: dictionary.sources.all },
+    { value: "Reddit", label: dictionary.sources.reddit },
+    { value: "HackerNews", label: dictionary.sources.hackerNews },
+    { value: "App Store", label: dictionary.sources.appStore },
+  ];
 
   async function handleRefresh() {
     setIsRefreshing(true);
@@ -481,7 +540,7 @@ export function DiscoveryFeed({
       setCurrentProblems(nextProblems);
       setLastRefreshedAt(data.refreshedAt);
     } catch {
-      setRefreshError("Live sources could not be refreshed. Showing the latest loaded board.");
+      setRefreshError(dictionary.refreshError);
     } finally {
       setIsRefreshing(false);
     }
@@ -513,8 +572,8 @@ export function DiscoveryFeed({
   }, [currentProblems, minScore, query, sector, sourceFilter, timeWindow]);
 
   const columns = useMemo(
-    () => buildColumns(filtered, sort),
-    [filtered, sort],
+    () => buildColumns(filtered, sort, dictionary),
+    [dictionary, filtered, sort],
   );
   const signalCount = filtered.reduce(
     (total, problem) => total + problem.sourceCount,
@@ -529,6 +588,22 @@ export function DiscoveryFeed({
   const activeSourceLabel =
     sourceFilterOptions.find((option) => option.value === sourceFilter)?.label ??
     "Tüm kaynaklar";
+
+  function scrollBoard(direction: "left" | "right") {
+    const scroller = document.getElementById(boardScrollerId);
+    if (!scroller) return;
+
+    scroller.scrollBy({
+      left: direction === "left" ? -460 : 460,
+      behavior: "smooth",
+    });
+  }
+
+  function scrollToColumn(columnId: string) {
+    document
+      .getElementById(`board-column-${columnId}`)
+      ?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" });
+  }
 
   return (
     <section className="mx-auto w-full max-w-[1680px] px-4 py-10 sm:px-6 lg:px-8">
@@ -546,13 +621,13 @@ export function DiscoveryFeed({
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex items-center gap-2 rounded-md border bg-primary/10 px-4 py-2 text-base font-medium text-primary">
                 <Radio className="size-5 animate-pulse" aria-hidden />
-                Live board
+                {dictionary.liveBoard}
               </div>
               <Badge variant="secondary" className="px-3 py-1 text-base">
-                {filtered.length} cards
+                {filtered.length} {dictionary.cards}
               </Badge>
               <Badge variant="outline" className="px-3 py-1 text-base">
-                {signalCount} signals
+                {signalCount} {dictionary.signals}
               </Badge>
               <Badge variant="outline" className="px-3 py-1 text-base">
                 {activeWindowLabel}
@@ -565,11 +640,10 @@ export function DiscoveryFeed({
               </Badge>
             </div>
             <h1 className="mt-5 max-w-4xl text-5xl font-semibold leading-tight md:text-6xl xl:text-7xl">
-              Explora board turns live pain into movable market lanes.
+              {dictionary.exploraHeadline}
             </h1>
             <p className="mt-4 max-w-3xl text-xl leading-9 text-muted-foreground">
-              Scan critical pain, fresh public evidence, and validated interest
-              as vertical stacks. Swipe horizontally on smaller screens.
+              {dictionary.exploraText}
             </p>
           </div>
 
@@ -577,7 +651,7 @@ export function DiscoveryFeed({
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-2xl">
                 <Flame className="size-5 text-accent" aria-hidden />
-                Window critical problem
+                {dictionary.windowCriticalProblem}
               </CardTitle>
               <CardDescription className="text-lg leading-7">
                 {selectedHotProblem
@@ -610,7 +684,7 @@ export function DiscoveryFeed({
                 className={`size-5 ${isRefreshing ? "animate-spin" : ""}`}
                 aria-hidden
               />
-              {isRefreshing ? "Yenileniyor..." : "Yenile"}
+              {isRefreshing ? dictionary.refreshing : dictionary.refresh}
             </Button>
             {lastRefreshedAt ? (
               <p className="text-sm leading-6 text-muted-foreground">
@@ -630,7 +704,7 @@ export function DiscoveryFeed({
               <Input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search live pain..."
+                placeholder={dictionary.searchPlaceholder}
                 className="h-14 pl-10 text-lg"
               />
             </div>
@@ -641,13 +715,13 @@ export function DiscoveryFeed({
             >
               <TabsList className="grid h-12 w-full grid-cols-3">
                 <TabsTrigger value="all" className="text-base">
-                  All
+                  {dictionary.all}
                 </TabsTrigger>
                 <TabsTrigger value="saas" className="text-base">
                   SaaS
                 </TabsTrigger>
                 <TabsTrigger value="developer tools" className="text-base">
-                  Dev
+                  {dictionary.dev}
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -655,7 +729,7 @@ export function DiscoveryFeed({
               <SheetTrigger asChild>
                 <Button variant="secondary" className="h-12 text-base lg:hidden">
                   <Filter className="size-5" aria-hidden />
-                  Sort
+                  {dictionary.sort}
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="w-[340px]">
@@ -663,29 +737,45 @@ export function DiscoveryFeed({
                   <TimeWindowPanel
                     window={timeWindow}
                     onWindowChange={setTimeWindow}
+                    options={timeWindowOptions}
+                    dictionary={dictionary}
                   />
                   <SourceFilterPanel
                     source={sourceFilter}
                     onSourceChange={setSourceFilter}
+                    options={sourceFilterOptions}
+                    dictionary={dictionary}
                   />
                   <ScoreFilterPanel
                     minScore={minScore}
                     onMinScoreChange={setMinScore}
+                    dictionary={dictionary}
                   />
-                  <FilterPanel sort={sort} onSortChange={setSort} />
+                  <FilterPanel
+                    sort={sort}
+                    onSortChange={setSort}
+                    dictionary={dictionary}
+                  />
                 </div>
               </SheetContent>
             </Sheet>
           </div>
 
           <div className="hidden lg:block">
-            <TimeWindowPanel window={timeWindow} onWindowChange={setTimeWindow} />
+            <TimeWindowPanel
+              window={timeWindow}
+              onWindowChange={setTimeWindow}
+              options={timeWindowOptions}
+              dictionary={dictionary}
+            />
           </div>
 
           <div className="hidden lg:block">
             <SourceFilterPanel
               source={sourceFilter}
               onSourceChange={setSourceFilter}
+              options={sourceFilterOptions}
+              dictionary={dictionary}
             />
           </div>
 
@@ -693,21 +783,70 @@ export function DiscoveryFeed({
             <ScoreFilterPanel
               minScore={minScore}
               onMinScoreChange={setMinScore}
+              dictionary={dictionary}
             />
           </div>
 
           <div className="hidden lg:block">
-            <FilterPanel sort={sort} onSortChange={setSort} />
+            <FilterPanel
+              sort={sort}
+              onSortChange={setSort}
+              dictionary={dictionary}
+            />
           </div>
         </aside>
 
         <div className="overflow-hidden rounded-lg border bg-card/40">
           {filtered.length > 0 ? (
-            <div className="flex snap-x gap-4 overflow-x-auto scroll-smooth p-4 pb-6">
-              {columns.map((column) => (
-                <BoardColumnCard key={column.id} column={column} />
-              ))}
-            </div>
+            <>
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-background/70 p-3 backdrop-blur">
+                <div className="flex flex-wrap gap-2">
+                  {columns.map((column) => (
+                    <Button
+                      key={column.id}
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => scrollToColumn(column.id)}
+                    >
+                      {column.title}
+                      <Badge variant="outline" className="ml-1">
+                        {column.problems.length}
+                      </Badge>
+                    </Button>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    aria-label="Scroll board left"
+                    onClick={() => scrollBoard("left")}
+                  >
+                    <ChevronLeft className="size-4" aria-hidden />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    aria-label="Scroll board right"
+                    onClick={() => scrollBoard("right")}
+                  >
+                    <ChevronRight className="size-4" aria-hidden />
+                  </Button>
+                </div>
+              </div>
+              <div
+                id={boardScrollerId}
+                className="flex snap-x gap-4 overflow-x-auto scroll-smooth p-4 pb-6"
+              >
+                {columns.map((column) => (
+                  <BoardColumnCard
+                    key={column.id}
+                    column={column}
+                    dictionary={dictionary}
+                  />
+                ))}
+              </div>
+            </>
           ) : (
             <div className="p-6">
               <div className="rounded-md border border-dashed bg-background/35 p-8 text-center">

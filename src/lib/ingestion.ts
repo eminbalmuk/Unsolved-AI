@@ -199,6 +199,16 @@ const hackerNewsMetaPatterns = [
   /\b(?:who is hiring|who wants to be hired|freelancer seeking freelancer)\b/i,
   /\b(?:launch hn|show hn|tell hn)\b/i,
 ];
+const strongPainPatterns = [
+  /\b(?:can't|cannot|impossible|blocked|stuck|drowning|overwhelmed|waste of time)\b/i,
+  /\b(?:throw you under the bus|toxic|undervaluing|delays|backlog|broken)\b/i,
+  /\b(?:manual workaround|spreadsheets?|legacy systems?|surprise bill)\b/i,
+];
+const solutionSeekingPatterns = [
+  /\b(?:is there|looking for|anyone know)\s+(?:a|an|any)?\s*.{0,60}\b(?:tool|app|software|saas|solution|platform)\b/i,
+  /\bhow (?:do you|to|can (?:i|we|you))\s+(?:handle|manage|deal with|track|automate|solve|evaluate)\b/i,
+  /\b(?:need|wish|would pay for|willing to pay|budget|without spending)\b/i,
+];
 
 function compactText(value: string) {
   return value.replace(/\s+/g, " ").trim();
@@ -240,6 +250,19 @@ function patternScore(text: string, patterns: RegExp[]) {
   return patterns.reduce((score, pattern) => score + (pattern.test(text) ? 1 : 0), 0);
 }
 
+function scoreSignalStrength(text: string, terms: string[]) {
+  const lower = text.toLowerCase();
+
+  return terms.reduce((score, term) => {
+    const pattern = new RegExp(
+      term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+      "g",
+    );
+
+    return score + (lower.match(pattern)?.length ?? 0);
+  }, 0);
+}
+
 function classifySignal(text: string): ProblemCategory {
   const lower = text.toLowerCase();
 
@@ -269,24 +292,50 @@ function inferTags(text: string) {
 
 function scoreBreakdown(signal: RawSignal): PainScoreBreakdown {
   const text = `${signal.title} ${signal.body}`;
-  const painHits = keywordScore(text, painTerms);
-  const payHits = keywordScore(text, payTerms);
-  const discussionBoost =
+  const lower = text.toLowerCase();
+  const painHits = scoreSignalStrength(text, painTerms);
+  const payHits = scoreSignalStrength(text, payTerms);
+  const strongPainHits = patternScore(text, strongPainPatterns);
+  const solutionIntentHits = patternScore(text, solutionSeekingPatterns);
+  const buyingContext =
+    solutionIntentHits > 0 ||
+    /\b(?:tool|app|software|saas|platform|vendor|subscription|billing|client|customer|workflow)\b/i.test(
+      text,
+    );
+  const commentCount = Math.max(0, signal.comments ?? 0);
+  const voteScore = Math.max(0, signal.score ?? 0);
+  const socialBoost =
     signal.platform === "Reddit" || signal.platform === "HackerNews"
-      ? Math.log10((signal.comments ?? 0) + 1) * 18
+      ? Math.min(34, Math.sqrt(commentCount) * 3.4) +
+        Math.min(18, Math.log10(voteScore + 1) * 9)
       : 0;
+  const lengthBoost = Math.min(12, compactText(text).length / 120);
   const lowRatingBoost =
-    signal.rating && signal.rating <= 3 ? (4 - signal.rating) * 16 : 0;
+    signal.rating && signal.rating <= 3 ? (4 - signal.rating) * 18 : 0;
+  const dollarBoost = lower.includes("$") ? 14 : 0;
+  const willingnessBase = buyingContext ? 10 : 4;
+  const willingnessMultiplier = buyingContext ? 12 : 6;
 
   return {
     frequency: Math.min(
       100,
-      18 + Math.log10(Math.max(0, signal.score ?? 0) + 1) * 14 + discussionBoost,
+      10 + socialBoost + solutionIntentHits * 8 + lengthBoost,
     ),
-    emotionalIntensity: Math.min(100, 16 + painHits * 9 + lowRatingBoost),
+    emotionalIntensity: Math.min(
+      100,
+      12 +
+        painHits * 6 +
+        strongPainHits * 14 +
+        solutionIntentHits * 6 +
+        lowRatingBoost,
+    ),
     willingnessToPay: Math.min(
       100,
-      12 + payHits * 14 + (text.toLowerCase().includes("$") ? 14 : 0),
+      willingnessBase +
+        payHits * willingnessMultiplier +
+        solutionIntentHits * 10 +
+        (buyingContext ? dollarBoost : dollarBoost / 2) +
+        Math.min(16, strongPainHits * 6),
     ),
   };
 }
@@ -360,7 +409,7 @@ function signalToProblem(signal: RawSignal, index: number): Problem {
         ? "Mobile Apps"
         : "SaaS",
     category: classifySignal(text),
-    status: painScore >= 55 ? "validated" : "rising",
+    status: painScore >= 60 ? "validated" : "rising",
     summary: truncate(signal.body || signal.title, 150),
     aiSummary: `Live heuristic summary: this ${signal.platform} signal repeats a concrete customer pain around ${tags.join(", ")}. It should be reviewed against more sources before product commitment.`,
     painScore,

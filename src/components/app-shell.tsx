@@ -9,16 +9,19 @@ import {
 import { Button } from "@/components/ui/button";
 import { HeaderAuth } from "@/components/header-auth";
 import { BrandLogo } from "@/components/brand-logo";
-
-const navItems = [
-  { href: "/", label: "Home", icon: Home },
-  { href: "/explora", label: "Explora", icon: Radar },
-  { href: "/dashboard", label: "Dashboard", icon: Activity },
-  { href: "/reports", label: "Reports", icon: Building2 },
-  { href: "/admin", label: "Admin", icon: ShieldCheck },
-];
+import { LanguageSwitcher } from "@/components/language-switcher";
+import { getDictionary, getLocale } from "@/lib/i18n-server";
 
 export async function AppShell({ children }: { children: React.ReactNode }) {
+  const [locale, dictionary] = await Promise.all([getLocale(), getDictionary()]);
+  const navItems = [
+    { href: "/", label: dictionary.common.nav.home, icon: Home },
+    { href: "/explora", label: dictionary.common.nav.explora, icon: Radar },
+    { href: "/dashboard", label: dictionary.common.nav.dashboard, icon: Activity },
+    { href: "/reports", label: dictionary.common.nav.reports, icon: Building2 },
+    { href: "/admin", label: dictionary.common.nav.admin, icon: ShieldCheck },
+  ];
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="pointer-events-none fixed inset-0 -z-10 dashboard-grid opacity-35" />
@@ -30,7 +33,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
             <span>
               <span className="block text-lg font-semibold">Unsolved</span>
               <span className="block text-base text-muted-foreground">
-                Problem discovery radar
+                {dictionary.common.brandTagline}
               </span>
             </span>
           </Link>
@@ -46,7 +49,10 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
             ))}
           </nav>
 
-          <HeaderAuth />
+          <div className="flex items-center gap-2">
+            <LanguageSwitcher locale={locale} />
+            <HeaderAuth dictionary={dictionary.common} />
+          </div>
         </div>
       </header>
       <main>{children}</main>

@@ -3,8 +3,13 @@ import { LogOut, UserRound } from "lucide-react";
 import { getCurrentUser, isAuthConfigured } from "@/lib/auth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import type { Dictionary } from "@/lib/i18n";
 
-export async function HeaderAuth() {
+export async function HeaderAuth({
+  dictionary,
+}: {
+  dictionary: Dictionary["common"];
+}) {
   const configured = isAuthConfigured();
   const user = await getCurrentUser();
 
@@ -12,10 +17,10 @@ export async function HeaderAuth() {
     return (
       <div className="hidden items-center gap-2 sm:flex">
         <Badge variant="outline" className="text-base">
-          Auth setup needed
+          {dictionary.authSetupNeeded}
         </Badge>
         <Button size="sm" className="text-lg" asChild>
-          <Link href="/login">Sign in</Link>
+          <Link href="/login">{dictionary.signIn}</Link>
         </Button>
       </div>
     );
@@ -25,10 +30,10 @@ export async function HeaderAuth() {
     return (
       <div className="hidden items-center gap-2 sm:flex">
         <Button size="sm" variant="ghost" className="text-lg" asChild>
-          <Link href="/login">Sign in</Link>
+          <Link href="/login">{dictionary.signIn}</Link>
         </Button>
         <Button size="sm" className="text-lg" asChild>
-          <Link href="/register">Create account</Link>
+          <Link href="/register">{dictionary.createAccount}</Link>
         </Button>
       </div>
     );
@@ -46,7 +51,7 @@ export async function HeaderAuth() {
       <form action="/api/auth/logout" method="post">
         <Button size="sm" variant="secondary" className="text-lg">
           <LogOut className="size-4" aria-hidden />
-          Sign out
+          {dictionary.signOut}
         </Button>
       </form>
     </div>

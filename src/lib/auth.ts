@@ -83,6 +83,29 @@ async function verifySupabasePassword(email: string, password: string) {
   return data;
 }
 
+async function refreshSupabaseSession(refreshToken: string) {
+  const config = getSupabaseAuthConfig();
+  if (!config) return null;
+
+  const response = await fetch(`${config.url}/auth/v1/token?grant_type=refresh_token`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: config.anonKey,
+      Authorization: `Bearer ${config.anonKey}`,
+    },
+    body: JSON.stringify({ refresh_token: refreshToken }),
+    cache: "no-store",
+  });
+  const data = (await response.json()) as SupabaseSessionResponse;
+
+  if (!response.ok || !data.access_token || !data.user) return null;
+
+  await syncSupabaseUser(data.user);
+
+  return data.user;
+}
+
 async function syncSupabaseUser(user: SupabaseAuthUser) {
   if (!isDatabaseConfigured() || !user.email) return;
 
@@ -156,6 +179,7 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
   const cookieStore = await cookies();
   const supabaseConfig = getSupabaseAuthConfig();
   const supabaseAccessToken = cookieStore.get(SUPABASE_ACCESS_COOKIE)?.value;
+  const supabaseRefreshToken = cookieStore.get(SUPABASE_REFRESH_COOKIE)?.value;
 
   if (supabaseConfig && supabaseAccessToken) {
     try {
@@ -167,7 +191,22 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
         cache: "no-store",
       });
 
-      if (!response.ok) return null;
+      if (!response.ok) {
+        const refreshedUser = supabaseRefreshToken
+          ? await refreshSupabaseSession(supabaseRefreshToken)
+          : null;
+
+        if (!refreshedUser) return null;
+
+        return {
+          id: refreshedUser.id,
+          email: refreshedUser.email ?? "",
+          name: refreshedUser.user_metadata?.name ?? null,
+          company: refreshedUser.user_metadata?.company ?? null,
+          role: "FOUNDER",
+          plan: "FREEMIUM",
+        };
+      }
 
       const user = (await response.json()) as SupabaseAuthUser;
       await syncSupabaseUser(user);
@@ -181,7 +220,35 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
         plan: "FREEMIUM",
       };
     } catch {
-      return null;
+      const refreshedUser = supabaseRefreshToken
+        ? await refreshSupabaseSession(supabaseRefreshToken)
+        : null;
+
+      if (!refreshedUser) return null;
+
+      return {
+        id: refreshedUser.id,
+        email: refreshedUser.email ?? "",
+        name: refreshedUser.user_metadata?.name ?? null,
+        company: refreshedUser.user_metadata?.company ?? null,
+        role: "FOUNDER",
+        plan: "FREEMIUM",
+      };
+    }
+  }
+
+  if (supabaseConfig && supabaseRefreshToken) {
+    const refreshedUser = await refreshSupabaseSession(supabaseRefreshToken);
+
+    if (refreshedUser) {
+      return {
+        id: refreshedUser.id,
+        email: refreshedUser.email ?? "",
+        name: refreshedUser.user_metadata?.name ?? null,
+        company: refreshedUser.user_metadata?.company ?? null,
+        role: "FOUNDER",
+        plan: "FREEMIUM",
+      };
     }
   }
 

@@ -11,9 +11,9 @@ export function calculatePainScore({
 }
 
 export function scoreTone(score: number) {
-  if (score >= 55) return "critical";
-  if (score >= 40) return "high";
-  if (score >= 25) return "warm";
+  if (score >= 60) return "critical";
+  if (score >= 45) return "high";
+  if (score >= 28) return "warm";
   return "watch";
 }
 

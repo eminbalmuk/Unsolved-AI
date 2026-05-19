@@ -3,6 +3,7 @@ import { Activity, DatabaseZap, Radar, Sparkles } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { DiscoveryFeed } from "@/components/discovery-feed";
 import { MetricCard } from "@/components/metric-card";
+import { getDictionary } from "@/lib/i18n-server";
 import { getHotLiveProblem, getLiveProblems } from "@/lib/ingestion";
 
 export const revalidate = 900;
@@ -12,6 +13,18 @@ export default async function ExplorePage() {
     getLiveProblems(),
     getHotLiveProblem(),
   ]);
+  const dictionary = await getDictionary();
+  const signalCount = problems.reduce(
+    (total, problem) => total + problem.sourceCount,
+    0,
+  );
+  const averagePainScore =
+    problems.length > 0
+      ? Math.round(
+          problems.reduce((total, problem) => total + problem.painScore, 0) /
+            problems.length,
+        )
+      : 0;
 
   return (
     <AppShell>
@@ -33,36 +46,34 @@ export default async function ExplorePage() {
           <div className="max-w-3xl space-y-7">
             <div className="inline-flex items-center gap-2 rounded-full border bg-card/70 px-3 py-1 text-base text-muted-foreground backdrop-blur">
               <Sparkles className="size-4 text-primary" aria-hidden />
-              Live public data refreshes every 15 minutes
+              {dictionary.explore.liveRefresh}
             </div>
             <div className="space-y-5">
               <h1 className="max-w-4xl text-6xl font-semibold leading-[1.02] md:text-8xl">
-                Explore live SaaS pain as a horizontal market board.
+                {dictionary.explore.headline}
               </h1>
               <p className="max-w-3xl text-2xl leading-10 text-muted-foreground">
-                Swipe through vertical lanes of critical pain, rising signals,
-                fresh evidence, and validated interest. Each card stays tied to
-                live public sources.
+                {dictionary.explore.subhead}
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
               <MetricCard
                 icon={Radar}
-                label="Hot problems"
-                value="5"
-                hint="Live sources"
+                label={dictionary.explore.hotProblems}
+                value={String(problems.length)}
+                hint={dictionary.explore.liveSources}
               />
               <MetricCard
                 icon={DatabaseZap}
-                label="Signals"
-                value="644"
-                hint="Public signals"
+                label={dictionary.explore.signals}
+                value={signalCount.toLocaleString("en")}
+                hint={dictionary.explore.publicSignals}
               />
               <MetricCard
                 icon={Activity}
-                label="Avg pain"
-                value="81"
-                hint="Weighted score"
+                label={dictionary.explore.averagePain}
+                value={String(averagePainScore)}
+                hint={dictionary.explore.weightedScore}
               />
             </div>
           </div>
@@ -78,7 +89,9 @@ export default async function ExplorePage() {
                 priority
               />
               <div className="absolute bottom-6 left-6 right-6 rounded-md border bg-background/82 p-4 backdrop-blur">
-                <p className="text-base font-medium">Live opportunity signal</p>
+                <p className="text-base font-medium">
+                  {dictionary.explore.liveOpportunity}
+                </p>
                 <p className="mt-1 text-base text-muted-foreground">
                   {hotProblem.title}
                 </p>
@@ -88,7 +101,7 @@ export default async function ExplorePage() {
         </div>
       </section>
 
-      <DiscoveryFeed problems={problems} />
+      <DiscoveryFeed problems={problems} dictionary={dictionary.discovery} />
     </AppShell>
   );
 }
