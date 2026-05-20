@@ -3,6 +3,7 @@ import { Building2, FileText, KeyRound, LockKeyhole, MailCheck } from "lucide-re
 import { AppShell } from "@/components/app-shell";
 import { ReportBarChart } from "@/components/charts";
 import { MetricCard } from "@/components/metric-card";
+import { ReportEmailTestButton } from "@/components/report-email-test-button";
 import { ScoreBadge } from "@/components/score-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -54,10 +55,7 @@ export default async function ReportsPage() {
                   defaultValue="Intercom, Stripe Billing, Amplitude"
                 />
               </div>
-              <Button className="w-full">
-                <MailCheck className="size-4" aria-hidden />
-                {dictionary.reports.schedule}
-              </Button>
+              <ReportEmailTestButton dictionary={dictionary.reports} />
             </CardContent>
           </Card>
 
