@@ -900,6 +900,7 @@ export const UserScalarFieldEnum = {
   role: 'role',
   plan: 'plan',
   company: 'company',
+  emailService: 'emailService',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -1075,6 +1076,20 @@ export type EnumSubscriptionPlanFieldRefInput<$PrismaModel> = FieldRefInputType<
  * Reference to a field of type 'SubscriptionPlan[]'
  */
 export type ListEnumSubscriptionPlanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'SubscriptionPlan[]'>
+    
+
+
+/**
+ * Reference to a field of type 'EmailServiceStatus'
+ */
+export type EnumEmailServiceStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'EmailServiceStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'EmailServiceStatus[]'
+ */
+export type ListEnumEmailServiceStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'EmailServiceStatus[]'>
     
 
 

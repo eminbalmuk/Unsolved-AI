@@ -12,6 +12,7 @@ export type SessionUser = {
   email: string;
   name: string | null;
   company: string | null;
+  emailService: "DISABLED" | "ENABLED";
   role: string;
   plan: string;
 };
@@ -130,6 +131,39 @@ async function syncSupabaseUser(user: SupabaseAuthUser) {
   }
 }
 
+async function getMirroredSessionUser(user: SupabaseAuthUser): Promise<SessionUser> {
+  const fallback: SessionUser = {
+    id: user.id,
+    email: user.email ?? "",
+    name: user.user_metadata?.name ?? null,
+    company: user.user_metadata?.company ?? null,
+    emailService: "DISABLED",
+    role: "FOUNDER",
+    plan: "FREEMIUM",
+  };
+
+  if (!isDatabaseConfigured()) return fallback;
+
+  try {
+    const dbUser = await getPrisma().user.findUnique({
+      where: { id: user.id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        company: true,
+        emailService: true,
+        role: true,
+        plan: true,
+      },
+    });
+
+    return dbUser ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 function getAuthSecret() {
   const secret = process.env.AUTH_SECRET;
 
@@ -198,27 +232,13 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
 
         if (!refreshedUser) return null;
 
-        return {
-          id: refreshedUser.id,
-          email: refreshedUser.email ?? "",
-          name: refreshedUser.user_metadata?.name ?? null,
-          company: refreshedUser.user_metadata?.company ?? null,
-          role: "FOUNDER",
-          plan: "FREEMIUM",
-        };
+        return getMirroredSessionUser(refreshedUser);
       }
 
       const user = (await response.json()) as SupabaseAuthUser;
       await syncSupabaseUser(user);
 
-      return {
-        id: user.id,
-        email: user.email ?? "",
-        name: user.user_metadata?.name ?? null,
-        company: user.user_metadata?.company ?? null,
-        role: "FOUNDER",
-        plan: "FREEMIUM",
-      };
+      return getMirroredSessionUser(user);
     } catch {
       const refreshedUser = supabaseRefreshToken
         ? await refreshSupabaseSession(supabaseRefreshToken)
@@ -226,14 +246,7 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
 
       if (!refreshedUser) return null;
 
-      return {
-        id: refreshedUser.id,
-        email: refreshedUser.email ?? "",
-        name: refreshedUser.user_metadata?.name ?? null,
-        company: refreshedUser.user_metadata?.company ?? null,
-        role: "FOUNDER",
-        plan: "FREEMIUM",
-      };
+      return getMirroredSessionUser(refreshedUser);
     }
   }
 
@@ -241,14 +254,7 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
     const refreshedUser = await refreshSupabaseSession(supabaseRefreshToken);
 
     if (refreshedUser) {
-      return {
-        id: refreshedUser.id,
-        email: refreshedUser.email ?? "",
-        name: refreshedUser.user_metadata?.name ?? null,
-        company: refreshedUser.user_metadata?.company ?? null,
-        role: "FOUNDER",
-        plan: "FREEMIUM",
-      };
+      return getMirroredSessionUser(refreshedUser);
     }
   }
 
@@ -269,6 +275,7 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
         email: true,
         name: true,
         company: true,
+        emailService: true,
         role: true,
         plan: true,
       },
@@ -302,12 +309,14 @@ export async function ensureDatabaseUser(user: SessionUser) {
         email: user.email,
         name: user.name,
         company: user.company,
+        emailService: user.emailService,
       },
       create: {
         id: user.id,
         email: user.email,
         name: user.name,
         company: user.company,
+        emailService: user.emailService,
         passwordHash: "supabase-auth",
       },
     });
@@ -382,6 +391,7 @@ export async function signUpWithSupabase({
           email: data.user.email ?? email,
           name: data.user.user_metadata?.name ?? name,
           company: data.user.user_metadata?.company ?? company ?? null,
+          emailService: "DISABLED" as const,
           role: "FOUNDER",
           plan: "FREEMIUM",
         }
@@ -424,6 +434,7 @@ export async function signInWithSupabase({
     email: data.user.email ?? email,
     name: data.user.user_metadata?.name ?? null,
     company: data.user.user_metadata?.company ?? null,
+    emailService: "DISABLED",
     role: "FOUNDER",
     plan: "FREEMIUM",
   };

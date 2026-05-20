@@ -20,6 +20,11 @@ enum SubscriptionPlan {
   ENTERPRISE
 }
 
+enum EmailServiceStatus {
+  DISABLED
+  ENABLED
+}
+
 model User {
   id           String           @id @default(cuid())
   name         String?
@@ -28,6 +33,7 @@ model User {
   role         UserRole         @default(FOUNDER)
   plan         SubscriptionPlan @default(FREEMIUM)
   company      String?
+  emailService EmailServiceStatus @default(DISABLED)
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
 

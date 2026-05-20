@@ -67,6 +67,7 @@ export async function POST(request: Request) {
       email: true,
       name: true,
       company: true,
+      emailService: true,
       role: true,
       plan: true,
       passwordHash: true,
@@ -96,6 +97,7 @@ export async function POST(request: Request) {
     email: user.email,
     name: user.name,
     company: user.company,
+    emailService: user.emailService,
     role: user.role,
     plan: user.plan,
   };

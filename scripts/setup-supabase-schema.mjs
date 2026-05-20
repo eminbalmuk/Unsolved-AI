@@ -23,6 +23,12 @@ const statements = [
   END $$;
   `,
   `
+  DO $$ BEGIN
+    CREATE TYPE "EmailServiceStatus" AS ENUM ('DISABLED', 'ENABLED');
+  EXCEPTION WHEN duplicate_object THEN NULL;
+  END $$;
+  `,
+  `
   CREATE TABLE IF NOT EXISTS "User" (
     "id" TEXT PRIMARY KEY,
     "name" TEXT,
@@ -31,9 +37,14 @@ const statements = [
     "role" "UserRole" NOT NULL DEFAULT 'FOUNDER',
     "plan" "SubscriptionPlan" NOT NULL DEFAULT 'FREEMIUM',
     "company" TEXT,
+    "emailService" "EmailServiceStatus" NOT NULL DEFAULT 'DISABLED',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
+  `,
+  `
+  ALTER TABLE "User"
+    ADD COLUMN IF NOT EXISTS "emailService" "EmailServiceStatus" NOT NULL DEFAULT 'DISABLED';
   `,
   `
   CREATE TABLE IF NOT EXISTS "ProblemRecord" (

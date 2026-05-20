@@ -85,6 +85,7 @@ export async function POST(request: Request) {
       email: true,
       name: true,
       company: true,
+      emailService: true,
       role: true,
       plan: true,
     },

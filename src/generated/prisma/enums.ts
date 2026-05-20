@@ -26,3 +26,11 @@ export const SubscriptionPlan = {
 } as const
 
 export type SubscriptionPlan = (typeof SubscriptionPlan)[keyof typeof SubscriptionPlan]
+
+
+export const EmailServiceStatus = {
+  DISABLED: 'DISABLED',
+  ENABLED: 'ENABLED'
+} as const
+
+export type EmailServiceStatus = (typeof EmailServiceStatus)[keyof typeof EmailServiceStatus]

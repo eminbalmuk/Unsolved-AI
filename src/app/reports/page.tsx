@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { Building2, FileText, KeyRound, LockKeyhole, MailCheck } from "lucide-react";
+import { Clock3, FileText, LockKeyhole, MailCheck } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
-import { ReportBarChart } from "@/components/charts";
 import { MetricCard } from "@/components/metric-card";
 import { ReportEmailTestButton } from "@/components/report-email-test-button";
 import { ScoreBadge } from "@/components/score-badge";
@@ -14,19 +13,25 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { weeklyReport } from "@/lib/data";
 import { getCurrentUser, isAuthConfigured } from "@/lib/auth";
 import { getDictionary } from "@/lib/i18n-server";
+import { getLiveProblems } from "@/lib/ingestion";
 
 export default async function ReportsPage() {
-  const [user, dictionary] = await Promise.all([
+  const [user, dictionary, problems] = await Promise.all([
     getCurrentUser(),
     getDictionary(),
+    getLiveProblems(),
   ]);
   const authConfigured = isAuthConfigured();
+  const weeklyProblems = problems
+    .slice()
+    .sort((a, b) => b.painScore - a.painScore)
+    .slice(0, 5);
+  const totalSources = weeklyProblems.reduce(
+    (total, problem) => total + problem.sourceCount,
+    0,
+  );
 
   return (
     <AppShell>
@@ -39,32 +44,35 @@ export default async function ReportsPage() {
                 {dictionary.reports.setupDescription}
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="company">{dictionary.reports.company}</Label>
-                <Input id="company" defaultValue={weeklyReport.company} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="sector">{dictionary.reports.sector}</Label>
-                <Input id="sector" defaultValue={weeklyReport.sector} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="competitors">{dictionary.reports.competitors}</Label>
-                <Textarea
-                  id="competitors"
-                  defaultValue="Intercom, Stripe Billing, Amplitude"
-                />
-              </div>
-              <ReportEmailTestButton dictionary={dictionary.reports} />
+            <CardContent>
+              <ReportEmailTestButton
+                dictionary={dictionary.reports}
+                initialSubscribed={user?.emailService === "ENABLED"}
+                disabled={!user}
+              />
             </CardContent>
           </Card>
 
-          <MetricCard
-            icon={KeyRound}
-            label={dictionary.reports.apiAccess}
-            value={dictionary.reports.ready}
-            hint={dictionary.reports.enterpriseStub}
-          />
+          <div className="grid gap-4">
+            <MetricCard
+              icon={MailCheck}
+              label={dictionary.reports.delivery}
+              value="09:00"
+              hint={dictionary.reports.everyMonday}
+            />
+            <MetricCard
+              icon={FileText}
+              label={dictionary.reports.topProblems}
+              value={String(weeklyProblems.length)}
+              hint={dictionary.reports.includedInEmail}
+            />
+            <MetricCard
+              icon={Clock3}
+              label={dictionary.reports.sourceSignals}
+              value={String(totalSources)}
+              hint={dictionary.reports.sourceSignalsHint}
+            />
+          </div>
         </aside>
 
         <section className="space-y-6">
@@ -92,88 +100,55 @@ export default async function ReportsPage() {
               {dictionary.reports.previewEyebrow}
             </p>
             <h1 className="mt-2 text-4xl font-semibold">
-              {dictionary.reports.marketSignalsFor} {weeklyReport.company}
+              {dictionary.reports.weeklyDigestTitle}
             </h1>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-3">
-            <MetricCard
-              icon={Building2}
-              label={dictionary.reports.trackedSector}
-              value="B2B"
-              hint={dictionary.reports.saasOnlyMvp}
-            />
-            <MetricCard
-              icon={FileText}
-              label={dictionary.reports.topProblems}
-              value="5"
-              hint={dictionary.reports.includedInPdf}
-            />
-            <MetricCard
-              icon={MailCheck}
-              label={dictionary.reports.delivery}
-              value="09:00"
-              hint={dictionary.reports.everyMonday}
-            />
-          </div>
-
-          <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
-            <Card className="bg-card/82">
-              <CardHeader>
-                <CardTitle>{dictionary.reports.trendTitle}</CardTitle>
-                <CardDescription>
-                  {dictionary.reports.trendDescription}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ReportBarChart data={weeklyReport.trendDelta} />
-              </CardContent>
-            </Card>
-
-            <Card className="bg-card/82">
-              <CardHeader>
-                <CardTitle>{dictionary.reports.competitorSummary}</CardTitle>
-                <CardDescription>
-                  {dictionary.reports.competitorDescription}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {weeklyReport.competitorSignals.map((signal) => (
-                  <div key={signal.competitor} className="rounded-md border p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="font-medium">{signal.competitor}</span>
-                      <Badge variant="outline">{signal.mentions}</Badge>
-                    </div>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                      {signal.signal}
-                    </p>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
+            <p className="mt-3 max-w-3xl text-lg leading-8 text-muted-foreground">
+              {dictionary.reports.weeklyDigestText}
+            </p>
           </div>
 
           <Card className="bg-card/82">
             <CardHeader>
               <CardTitle>{dictionary.reports.highestScored}</CardTitle>
+              <CardDescription>
+                {dictionary.reports.highestScoredDescription}
+              </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-3">
-              {weeklyReport.topProblems.map((problem) => (
-                <div
+              {weeklyProblems.map((problem, index) => (
+                <Link
                   key={problem.id}
-                  className="flex flex-col gap-3 rounded-md border p-4 sm:flex-row sm:items-center sm:justify-between"
+                  href={`/problems/${problem.slug}`}
+                  className="block rounded-md border p-4 transition-colors hover:border-primary/50 hover:bg-muted/40"
                 >
-                  <span className="font-medium">{problem.title}</span>
-                  <div className="flex items-center gap-3">
-                    <ScoreBadge
-                      score={problem.painScore}
-                      label={dictionary.common.scorePrefix}
-                    />
-                    <span className="font-mono text-sm text-muted-foreground">
-                      {problem.validationCount} {dictionary.common.validators}
-                    </span>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="outline">#{index + 1}</Badge>
+                        {problem.sourcePlatforms.map((platform) => (
+                          <Badge key={platform} variant="secondary">
+                            {platform}
+                          </Badge>
+                        ))}
+                      </div>
+                      <h2 className="mt-3 text-xl font-semibold">
+                        {problem.title}
+                      </h2>
+                      <p className="mt-2 line-clamp-2 text-base leading-7 text-muted-foreground">
+                        {problem.summary}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-3">
+                      <ScoreBadge
+                        score={problem.painScore}
+                        label={dictionary.common.scorePrefix}
+                      />
+                      <span className="font-mono text-sm text-muted-foreground">
+                        {problem.validationCount} {dictionary.common.validators}
+                      </span>
+                    </div>
                   </div>
-                </div>
+                </Link>
               ))}
             </CardContent>
           </Card>
