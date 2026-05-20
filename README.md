@@ -68,8 +68,8 @@ https://unsolved-ai.vercel.app/
 1. Repoyu klonlayın:
 
 ```bash
-git clone <repo-url>
-cd Unsolved
+git clone https://github.com/eminbalmuk/Unsolved-AI.git
+cd Unsolved-AI
 ```
 
 2. Bağımlılıkları kurun:
