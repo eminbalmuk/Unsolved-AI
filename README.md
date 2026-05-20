@@ -134,9 +134,9 @@ Uygulama varsayılan olarak `http://localhost:3000` adresinde çalışır.
 
 Sistem varsayılan olarak koyu tema ile açılır. Navbar üzerinden tema ve dil değiştirilebilir.
 
-## Katkı (Contribution)
+## Ekip Üyeleri ve Katkı Alanları
 
-Proje görev dağılımı önem sırasına göre aşağıdaki şekilde planlanmıştır:
+Projede görev dağılımı aşağıdaki şekilde planlanmıştır:
 
 1. **Muhammet Emin Balmuk**  
    Ana mimari, problem keşif mantığı, Supabase entegrasyonu, canlı veri akışı, skorlama sistemi.
@@ -153,13 +153,10 @@ Proje görev dağılımı önem sırasına göre aşağıdaki şekilde planlanm�
 5. **Yusuf Üveyik**  
    Test, dokümantasyon, README düzeni, kurulum yönergeleri, son kullanıcı kontrolleri ve görsel kalite incelemeleri.
 
-Katkı sağlamak için önerilen akış:
-
-1. Yeni bir branch oluşturun.
-2. Değişikliklerinizi küçük ve anlaşılır commitler halinde yapın.
-3. `npm run lint` ve `npm run build` komutlarını çalıştırın.
-4. Pull request açmadan önce değişikliğin hangi ekranı veya API'yi etkilediğini açıklayın.
-
 ## Lisans
 
-Bu proje eğitim ve MVP geliştirme amacıyla hazırlanmıştır. Lisans tercihi proje sahibi tarafından ayrıca belirlenmediği sürece tüm hakları proje ekibine aittir.
+Bu proje **GNU Affero General Public License v3.0 (AGPLv3)** lisansı ile lisanslanmıştır.
+
+AGPLv3 kapsamında kaynak kodu kullanabilir, inceleyebilir, değiştirebilir ve dağıtabilirsiniz. Ancak bu yazılımı ağ üzerinden kullanıcıların erişimine açan türev çalışmaların da ilgili kaynak kodunu aynı lisans koşullarıyla paylaşması gerekir.
+
+Detaylı lisans metni için `LICENSE` dosyasına bakınız.
