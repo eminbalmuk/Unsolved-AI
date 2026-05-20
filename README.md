@@ -10,6 +10,12 @@ Unsolved, SaaS ve dijital ürün fikirleri geliştirmek isteyen ekipler için ge
 
 Projede ayrıca Türkçe/İngilizce dil desteği, koyu/açık tema, Supabase tabanlı kullanıcı hesabı, problem analizi, hesap yönetimi ve Resend ile test raporu maili gönderimi bulunmaktadır.
 
+## Test Sitesi
+
+Projenin test yayınına aşağıdaki adresten erişilebilir:
+
+https://unsolved-ai.vercel.app/
+
 ## Özellikler
 
 - Canlı problem keşif panosu: Reddit, Hacker News ve App Store sinyallerini listeler.
